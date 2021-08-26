@@ -1,0 +1,309 @@
+.form-group input
+{
+    width: 400px;
+    margin: 0 auto 0 auto;
+}
+
+.login-form
+{
+    text-align: center;
+}
+
+.scroll
+{
+    height: 400px;
+    width: 100%;
+    overflow-y: scroll;
+}
+
+.scroll2
+{
+    height: 400px;
+    width: 100%;
+    overflow: scroll;
+}
+
+
+
+table.list td, table.list th
+{
+    width: 16%;
+}
+
+.border
+{
+    border: 1px solid red;
+}
+
+.align-left
+{
+    width: 400px;
+}
+
+#img-list
+{
+    background-color: #fff;
+    width: 100%;
+}
+
+#img-list .img-conteiner
+{
+    float: left;
+    margin: 10px;
+}
+
+#img-list .img-conteiner img
+{
+    width: 215px;
+}
+
+#img-list .img-conteiner p
+{
+    text-align: center;
+    font-size: 12px;
+}
+
+#img-list p
+{
+    text-align: center;
+    font-size: 16px;
+    height: 80px;
+}
+
+.clr
+{
+    clear:both;
+}
+
+a#select-all-img
+{
+    float:left;
+}
+
+a#unselect-all-img
+{
+    float:right;
+}
+
+.img-del-btn
+{
+    margin: 10px 0 10px 0;
+}
+
+
+.img-list-wrap
+{
+    display: none;
+}
+
+
+#log-content img
+{
+    margin: 140px 0 0 400px;
+}
+
+
+.filename
+{
+    color: #2a00ff;
+    cursor: pointer;
+}
+
+.footer
+{
+    font-size: 0.5em;
+    text-align: center;
+}
+
+.exchange
+{
+    float: left;
+    margin-right: 100px;
+    margin-bottom: 100px;
+    width: 40%;
+    text-align: center;
+    /*border:1px solid red;*/
+}
+
+.exchange img
+{
+    width: 65%;
+    height: 65%;
+    cursor: pointer;
+}
+
+.exchange p
+{
+    text-align: center;
+    cursor: pointer;
+}
+
+.exchange a
+{
+    text-decoration: none;
+}
+
+.red-btn
+{
+    background-color: #990000;
+    color: #f0f0f0;
+}
+
+.orange-btn
+{
+    background-color: darkorange;
+    color: #f0f0f0;
+}
+
+.black-field
+{
+    width: 95%;
+    height: 400px;
+    background-color: #1b2426;
+    color: #3e8f3e;
+    font-size: 1.0em;
+    padding-left: 10px;
+}
+
+.hard-info
+{
+    width: 95%;
+    height: 200px;
+    background-color: #1b2426;
+    color: #3e8f3e;
+    font-size: 1.0em;
+    padding-left: 10px;
+}
+
+.hard-info img
+{
+    margin: 40px 0 0 400px;
+}
+
+.db
+{
+    height: 600px;
+}
+
+.db img
+{
+    margin: 220px 0 0 430px;
+}
+
+.stat-table td
+{
+    padding: 3px 8px 3px 8px;
+}
+
+#copy_result
+{
+    width: 128px;
+    margin: auto;
+}
+
+
+.api-data
+{
+    cursor: pointer;
+    text-decoration: none;
+}
+
+#api-data img
+{
+    display: block;
+    margin: 100px auto 0 auto ;
+}
+
+.message
+{
+    color: red;
+}
+
+.exchange-block
+{
+    margin: 10px 0 10px 0;
+}
+
+.time-interval
+{
+    font-size: 0.9em;
+}
+
+.pair-title
+{
+    cursor: pointer;
+}
+
+.pair-title:hover
+{
+    opacity: 0.6;
+}
+
+.controls{
+    cursor: pointer;
+}
+
+#file-list{
+    list-style-type: none;
+}
+
+#file-list-wrap{
+    margin: 10px 0 0 0;
+    width: 95%;
+    height: 400px;
+    background-color: #1b2426;
+    color: #3e8f3e;
+    font-size: 1.0em;
+    padding-left: 10px;
+}
+
+.red {
+    color: red;
+}
+
+.green{
+    color: green;
+}
+
+.pointer{
+    cursor: pointer;
+}
+
+.cron-item input{
+    width: 40px;
+    max-width: 40px;
+    float: left;
+    margin: 5px;
+    border-radius: 3px;
+    text-align: center;
+}
+
+.cron-item span{
+    float: left;
+}
+
+
+
+div.cron-item{
+   margin: 10px auto 10px auto;
+
+
+}
+
+.border-red{
+    border: 1px solid red;
+}
+
+.border-green{
+    border: 1px solid green;
+}
+
+.form-group div
+{
+    width: 400px;
+    margin: 0 auto 0 auto;
+}
+
+.clear{
+    clear: both;
+}

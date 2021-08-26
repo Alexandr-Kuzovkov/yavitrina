@@ -1,0 +1,85 @@
+version: '3.0'
+services:
+  proxy:
+    image: nginx:1.15-alpine
+    depends_on:
+     - scrapy
+    ports:
+     - "8080:80"
+    volumes:
+     - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+     - ./home/logs/boardfeeds:/home/root/logs/boardfeeds
+     - /mnt/boardfeeds:/mnt/boardfeeds
+    networks:
+      - back
+
+  scrapy:
+    build: .
+    tty: true
+    depends_on:
+      - splash
+    volumes:
+      - ./monitor:/scrapy/monitor
+      - ./jobscrapers:/scrapy/jobscrapers
+      - ./jobimporters:/scrapy/jobimporters
+      - ./feedgenerator:/scrapy/feedgenerator
+      - ./gcd_apec_feedgenerator:/scrapy/gcd_apec_feedgenerator
+      - ./fibois:/scrapy/fibois
+      - ./home/scrapyd.conf:/etc/scrapyd/scrapyd.conf
+      - ./home/scrapyd.conf:/home/root/.scrapyd.conf
+      - /home/ubuntu:/home/root
+      #- /home/user1:/home/root
+      #- /mnt/boardfeeds:/mnt/boardfeeds
+      - ./jobscrapers/utils/autorun.py:/home/root/autorun.py
+    dns: 8.8.8.8
+    #restart: always
+    networks:
+      - back
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
+
+  spiderkeeper:
+    build:
+      context: ./SpiderKeeper
+      dockerfile: Dockerfile
+    depends_on:
+      - scrapy
+    tty: true
+    networks:
+      - back
+    volumes:
+      - ./home:/home/root
+      - /home/ubuntu/config.ini:/home/root/config.ini
+      - /home/ubuntu/logs:/home/root/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
+
+  splash:
+    image: scrapinghub/splash
+    command: ["splash", "--max-timeout=3600",  "--disable-lua-sandbox"]
+    networks:
+      - back
+    ports:
+      - "5023:5023"
+      - "8050:8050"
+      - "8051:8051"
+    dns: 8.8.8.8
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
+    restart: unless-stopped
+
+networks:
+  back:
+    driver: bridge
+
+volumes:
+  logs: {}

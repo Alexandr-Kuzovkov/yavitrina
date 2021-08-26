@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content_header %}
+<h1>Fibois Stats</h1>
+{% endblock %}
+{% block content_body %}
+
+<div class="box">
+    <div class="box-header">
+        <h3 class="box-title">Expired jobs by Jobboards</h3>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body table-responsive">
+        <table class="table table-striped">
+            <tr>
+                <th style="width: 30px">Job board</th>
+                <th style="width: 160px">Count</th>
+            </tr>
+            {% for jobboard in jobboards %}
+            <tr>
+                <td>{{ jobboard }}</td>
+                <td id="{{ jobboard }}"><img src="/static/img/preload-small.gif"/></td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <td><b>Total:</b></td>
+                <td id="expired-total"><img src="/static/img/preload-small.gif"/></td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<script>
+    (function () {
+        function onLoad(){
+            getExpiredTotal()
+            var jobboards = {{ json.dumps(jobboards) | safe }}
+            for (var i=0; i < jobboards.length; i++){
+               getExpiredForJobboard(jobboards[i])
+            }
+        }
+        function getExpiredForJobboard(jobboard) {
+            var el = document.getElementById(jobboard);
+            jQuery.get('/fibois/ajax/expired_for_jobboard/'+ jobboard, function (data) {
+                //console.log(data, typeof data);
+                if (typeof data == 'object'){
+                    el.innerHTML = data.msg;
+                }else{
+                    el.innerHTML = data;
+                }
+            }).fail(function() {
+                el.innerHTML = 'error';
+              })
+        }
+        function getExpiredTotal() {
+            var el = document.getElementById('expired-total');
+            jQuery.get('/fibois/ajax/expired_total', function (data) {
+                //console.log(data, typeof data);
+                if (typeof data == 'object'){
+                    el.innerHTML = data.msg;
+                }else{
+                    el.innerHTML = data;
+                }
+            }).fail(function() {
+                el.innerHTML = 'error';
+              })
+        }
+        window.addEventListener('load', onLoad);
+    })();
+
+</script>
+{% endblock %}

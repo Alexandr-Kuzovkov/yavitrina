@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content_header %}
+<h1>Fibois Stats</h1>
+{% endblock %}
+{% block content_body %}
+<div class="box">
+    <div class="box-header">
+        <h3 class="box-title">Total</h3>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body">
+        <p>Total jobs: {{ stat.total_jobs }}</p>
+        <p>Total results html: {{ stat.total_results_html }}</p>
+        <p>Total details html: {{ stat.total_details_html }}</p>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-header">
+        <h3 class="box-title">Jobs by Jobboards</h3>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body table-responsive">
+        <table class="table table-striped">
+            <tr>
+                <th style="width: 30px">Job board</th>
+                <th style="width: 160px">Count</th>
+            </tr>
+            {% for jobboard, count in stat_by_jobboards.items() %}
+            <tr>
+                <td>{{ jobboard }}</td>
+                <td>{{ count }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-header">
+        <h3 class="box-title">Jobs by date</h3>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body table-responsive">
+        <table class="table table-striped">
+            <tr>
+                <th style="width: 30px">Date</th>
+                <th style="width: 160px">Count</th>
+            </tr>
+            {% for item in stat_by_date %}
+            <tr>
+                <td>{{ item['date'] }}</td>
+                <td>{{ item['count'] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+{% endblock %}

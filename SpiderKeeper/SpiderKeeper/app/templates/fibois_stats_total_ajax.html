@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block content_header %}
+<h1>Fibois Stats</h1>
+{% endblock %}
+{% block content_body %}
+<div class="box">
+    <div class="box-header">
+        <h3 class="box-title">Total</h3>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body">
+        <p>Total jobs: {{ stat.total_jobs }} (processed: {{stat.total_processed_jobs}}, pending: {{stat.total_pending_jobs}}, errored: {{stat.total_errored_jobs}})</p>
+        <p>Total results html: {{ stat.total_results_html }}</p>
+        <p>Total details html: {{ stat.total_details_html }}</p>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-header">
+        <h3 class="box-title">Scraped Jobs by Jobboards</h3>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body table-responsive">
+        <table class="table table-striped">
+            <tr>
+                <th style="width: 30px">Job board</th>
+                <th style="width: 160px">Total</th>
+                <th style="width: 160px">Processed</th>
+                <th style="width: 160px">Pending</th>
+                <th style="width: 160px">Errored</th>
+            </tr>
+            {% for jobboard in jobboards %}
+            <tr>
+                <td>{{ jobboard }}</td>
+                <td id="{{ jobboard }}"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ jobboard }}-processed"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ jobboard }}-pending"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ jobboard }}-errored"><img src="/static/img/preload-small.gif"/></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-header">
+        <h3 class="box-title">Events by date</h3>
+        <div>
+            <ul>
+                <li>Total Parsed : number of jobs parsed that day</li>
+                <li>Total Scraped : number of jobs scraped that day</li>
+                <li>Processed : number of jobs scraped that day that are already parsed</li>
+                <li>Pending : number of jobs scraped that day that are pending parsing</li>
+                <li>Errored : number of jobs scraped that day that could not be parsed</li>
+            </ul>
+        </div>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body table-responsive">
+        <table class="table table-striped">
+            <tr>
+                <th style="width: 30px">Date</th>
+                <th style="width: 160px">Total Parsed</th>
+                <th style="width: 160px">Total Scraped</th>
+                <th style="width: 160px">Processed</th>
+                <th style="width: 160px">Pending</th>
+                <th style="width: 160px">Errored</th>
+            </tr>
+            {% for datestr in dates %}
+            <tr>
+                <td>{{ datestr }}</td>
+                <td id="{{ datestr }}-parsed"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ datestr }}"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ datestr }}-processed"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ datestr }}-pending"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ datestr }}-errored"><img src="/static/img/preload-small.gif"/></td>           
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+
+<script>
+    (function () {
+        function onLoad(){
+            var jobboards = {{ json.dumps(jobboards) | safe }}
+            for (var i=0; i < jobboards.length; i++){
+               getCountForJobboard(jobboards[i])
+               getCountForJobboardPerStatus(jobboards[i], "processed")
+               getCountForJobboardPerStatus(jobboards[i], "errored")
+               getCountForJobboardPerStatus(jobboards[i], "pending")
+            }
+            var dates = {{ json.dumps(dates) | safe}}
+            for (var i=0; i < dates.length; i++){
+               getCountForDate(dates[i])
+               getCountForDatePerStatus(dates[i], "processed")
+               getCountForDatePerStatus(dates[i], "errored")
+               getCountForDatePerStatus(dates[i], "pending")
+               getParsedCountForDate(dates[i])
+            }
+        }
+
+        function getCountForJobboardPerStatus(jobboard, status) {
+            var el = document.getElementById(`${jobboard}-${status}`);
+            jQuery.get(`/fibois/ajax/${status}_count_for_jobboard/${jobboard}`, function (data) {
+                //console.log(data, typeof data);
+                el.innerHTML = data;
+            }).fail(function() {
+                el.innerHTML = 'error';
+              })
+        }
+
+        function getCountForJobboard(jobboard) {
+            var el = document.getElementById(jobboard);
+            jQuery.get('/fibois/ajax/count_for_jobboard/'+ jobboard, function (data) {
+                //console.log(data, typeof data);
+                el.innerHTML = data;
+            }).fail(function() {
+                el.innerHTML = 'error';
+              })
+        }
+
+        function getCountForDate(datestr) {
+            var el = document.getElementById(datestr);
+            jQuery.get('/fibois/ajax/count_for_date/'+ datestr, function (data) {
+                //console.log(data, typeof data);
+                if (typeof data == 'object'){
+                    el.innerHTML = data.msg;
+                }else{
+                    el.innerHTML = data;
+                }
+            }).fail(function() {
+                el.innerHTML = 'error';
+              })
+        }
+
+        function getCountForDatePerStatus(datestr, status) {
+            var el = document.getElementById(`${datestr}-${status}`);
+            jQuery.get(`/fibois/ajax/count_for_date_per_status/${datestr}/${status}`, function (data) {
+                //console.log(data, typeof data);
+                if (typeof data == 'object'){
+                    el.innerHTML = data.msg;
+                }else{
+                    el.innerHTML = data;
+                }
+            }).fail(function() {
+                el.innerHTML = 'error';
+              })
+        }
+
+        function getParsedCountForDate(datestr) {
+            var el = document.getElementById(`${datestr}-parsed`);
+            jQuery.get(`/fibois/ajax/parsed_count_for_date/${datestr}`, function (data) {
+                //console.log(data, typeof data);
+                if (typeof data == 'object'){
+                    el.innerHTML = data.msg;
+                }else{
+                    el.innerHTML = data;
+                }
+            }).fail(function() {
+                el.innerHTML = 'error';
+              })
+        }
+
+        window.addEventListener('load', onLoad);
+    })();
+
+</script>
+{% endblock %}

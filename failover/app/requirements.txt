@@ -1,0 +1,8 @@
+psycopg2-binary
+requests
+Flask>=0.9
+urllib3
+
+
+
+

@@ -1,0 +1,57 @@
+# You can specify a custom docker image from Docker Hub as your build environment.
+#image: node:6.11.1
+clone:
+  depth: 5       # include the last five commits
+pipelines:
+    #default:
+    #    - step:
+    #          caches:
+    #              - node
+    #              - vendors
+    #          script:
+    #              - npm install
+    #              - npm install -g ember-cli
+    #              - npm install -g bower
+    #              - bower install
+    #              - ember test
+    #              #- docker login -u xtramileimages -p xtramile123456
+    #              #- docker build -t xtramileimages/recruiter_webapp:latest .
+    #              #- docker push xtramileimages/recruiter_webapp:latest
+
+    branches:
+
+        stage:
+            - step:
+                  name: test ember app
+  #                caches:
+  #                    - node
+  #                    - vendors
+                  script:
+                       - echo 'Tests Will Be Added Later'
+  #                    - npm install
+  #                    - npm install -g ember-cli
+  #                    - npm install -g bower
+  #                    - bower install
+  #                    - ember test
+
+            - step:
+                 name: Build and push Image to Docker Cloud
+                 script:
+
+                      - docker login -u $DOCKER_LOGIN -p $DOCKER_PASSWORD
+                      - docker build -t $IMAGE_NAME:staging_latest -t $IMAGE_NAME:$BITBUCKET_COMMIT .
+                      - docker push $IMAGE_NAME:staging_latest
+            - step:
+                name: Deploy To Stage
+                deployment: staging
+                script:
+                      - ssh ubuntu@54.37.30.21 'hostname && whoami && cd ~/deploy/ && docker stack deploy -c docker-compose.yml platform --with-registry-auth'
+
+
+definitions:
+    caches:
+        vendors: vendor
+
+
+options:
+    docker: true

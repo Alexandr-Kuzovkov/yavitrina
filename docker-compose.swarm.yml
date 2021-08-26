@@ -1,0 +1,97 @@
+version: '3.2'
+services:
+  proxy:
+    image: nginx:1.11-alpine
+    depends_on:
+     - scrapy
+    ports:
+     - "80:80"
+    volumes:
+     - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+     - ./home/logs/boardfeeds:/home/root/logs/boardfeeds
+    networks:
+      - backend
+    deploy:
+      replicas: 1
+      #placement:
+      #  constraints:
+      #    - node.hostname == user1-H97-HD3
+      update_config:
+        parallelism: 1
+        delay: 10s
+  scrapy:
+    image: scrapy_scrapy
+    tty: true
+    depends_on:
+      - splash
+    volumes:
+      - ./monitor:/scrapy/monitor
+      - ./jobscrapers:/scrapy/jobscrapers
+      - ./jobimporters:/scrapy/jobimporters
+      - ./feedgenerator:/scrapy/feedgenerator
+      - ./home:/home/root
+      #- ./home/.scrapyd.conf:/etc/scrapyd/scrapyd.conf
+      - /home/user1/geoname.sqlite:/home/root/geoname.sqlite
+      - /home/user1/geoname.sqlite:/home/root/geobase.sqlite
+      #- /home/user1/db.conf:/home/root/db.conf
+    dns: 8.8.8.8
+    secrets:
+      - source: scrapy_conf_v1
+        target: /etc/scrapyd/scrapyd.conf
+      - source: scrapy_db_conf_v1
+        target: /home/root/db.conf
+    networks:
+      - backend
+    #command: sh -c "ln -s /run/secrets/scrapyd.conf /etc/scrapyd/scrapyd.conf && ln -s  /run/secrets/db.conf /home/root/db.conf && scrapyd"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == kuzovkov-pc
+      update_config:
+        parallelism: 1
+        delay: 10s
+  spiderkeeper:
+    image: scrapy_spiderkeeper
+    depends_on:
+      - scrapy
+    tty: true
+    networks:
+      - backend
+    volumes:
+      - ./home:/home/root
+    deploy:
+      replicas: 1
+      #placement:
+      #  constraints:
+      #    - node.hostname == home
+      update_config:
+        parallelism: 1
+        delay: 10s
+  splash:
+    image: scrapinghub/splash
+    command: ["splash", "--max-timeout=3600",  "--disable-lua-sandbox"]
+    networks:
+      - backend
+    ports:
+      - "5023:5023"
+      - "8050:8050"
+      - "8051:8051"
+    dns: 8.8.8.8
+    deploy:
+      replicas: 1
+      #placement:
+      #  constraints:
+      #    - node.hostname == kuzovkov-pc
+      update_config:
+        parallelism: 1
+        delay: 10s
+
+networks:
+  backend:
+
+secrets:
+  scrapy_conf_v1:
+    file: ./home/.scrapyd.conf
+  scrapy_db_conf_v1:
+    file: ./home/db.conf

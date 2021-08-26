@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Nodes</h2>
+    <h3>Masters:</h3>
+    <table class="table">
+        <tr>
+            <th>IP address</th><th>OS version</th>
+        </tr>
+        <tr>
+            {% if masters %}
+                {% for node in masters %}
+                <tr>
+                    <td>{{node['ip']}}</td>
+                    <td>{{node['os']['Description']}}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <td colspan="2"> master not found </td>
+            {% endif %}
+        </tr>
+    </table>
+
+<hr/>
+    <h3>Slaves</h3>
+    <table class="table">
+        <tr>
+            <th>IP address</th><th>OS version</th>
+        </tr>
+        {% if slaves %}
+        {% for node in slaves %}
+        <tr>
+            <td>{{node['ip']}}</td>
+            <td>{{node['os']['Description']}}</td>
+        </tr>
+        {% endfor %}
+        {% else%}
+        <tr>
+            <td colspan="2"> slaves nor found </td>
+        </tr>
+        {% endif %}
+    </table>
+{% if fails %}
+<hr/>
+<h3>Fails</h3>
+    <table class="table">
+        <tr>
+            <th>IP address</th><th>OS version</th>
+        </tr>
+        {% for node in fails %}
+        <tr>
+            <td>{{node['ip']}}</td>
+            <td>{{node['os']['Description']}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endif %}
+
+{% endblock %}

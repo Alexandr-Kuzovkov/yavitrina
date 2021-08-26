@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Replication stat</h2>
+    <h3>Masters:</h3>
+    {% if masters %}
+    {% for master in masters %}
+    <table class="table">
+        <tr>
+                <td>IP address: </td>
+                <td>{{master['ip']}}</td>
+        </tr>
+    </table>
+
+<hr/>
+    <h3>pg_stat_replication</h3>
+    <table class="table">
+        <tr>
+        {% for field in fields %}
+            <th> {{field}} </th>
+        {% endfor %}
+        </tr>
+        {% if master['slaves'] %}
+            {% for slave in master['slaves'] %}
+                <tr>
+                    {% for field in fields %}
+                    <td> {{slave[field]}} </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        {% else%}
+            <tr>
+                <td colspan="{{fields | length}}"> slaves not found </td>
+            </tr>
+        {% endif %}
+    </table>
+<hr/>
+<hr/>
+    {% endfor %}
+    {% else %}
+        <p>Masters not found</p>
+    {% endif %}
+
+{% endblock %}

@@ -1,0 +1,25 @@
+Monitoring cron jobs
+=========================
+
+How it works.
+---------------
+For each cron job assign unique slug.
+Then create job in Dashboard (http://40.118.41.25/failover/newjob) with this unique slug, description and max interval.
+When cron job complete work, it send HTTP request to URL:
+
+    http://40.118.41.25/failover/jobping/<job-unique-slug>
+
+Failover store time of this ping. If failover did not receve request from cron task in max interval,
+job will markes as died and notification will send to slack.
+In dasboard you can create, edit, delete jobs.
+
+Also cron job can send error message to URL:
+
+    http://40.118.41.25/failover/joberror/<job-unique-slug>
+
+Allowed methods are GET, POST
+Parameter "message" with error message is required as GET or POST parameter.
+Error will store in local database and will send to slack once.
+You can see and delete errors in dashboard.
+
+

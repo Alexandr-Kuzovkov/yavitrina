@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+     <h3>Config <span class="filename"> config.ini </span></h3>
+    <form method="post" action="/failover/config" onsubmit="save_content()">
+        <pre id="conf" class="black-field scroll2" contenteditable="true">{{content}}</pre>
+        <input type="hidden" id="conf-content" name="conf_content">
+        <button>Save</button>
+    </form>
+
+    <script type="text/javascript">
+        function save_content(){
+            $('#conf-content').val($('#conf').html());
+        }
+    </script>
+{% endblock %}

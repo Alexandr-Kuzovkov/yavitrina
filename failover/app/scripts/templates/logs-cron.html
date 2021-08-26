@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h3>Cron jobs failover log: <span class="filename"><?php echo $filename; ?></span> </h3>
+    <div  id="log-content" class="black-field scroll"><img src="/failover/static/img/preload.gif"/></div>
+    <script type="text/javascript">
+
+        function update_log(){
+            $('#log-content').load('/failover/get-log-cron');
+        }
+        var interval =setInterval(update_log, 2000);
+
+    </script>
+
+{% endblock %}

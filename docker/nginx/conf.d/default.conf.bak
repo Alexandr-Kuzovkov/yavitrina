@@ -1,0 +1,77 @@
+server {
+        listen       80;
+        #listen    443 ssl;
+        #ssl_certificate     www.example.com.crt;
+        #ssl_certificate_key www.example.com.key;
+        index	index.html;
+        autoindex on;
+
+	location / {
+                    if ($request_method = POST) {
+                        rewrite ^/(.*)$ /post_redirect/$1 last;
+                  }
+
+        }
+
+
+    location ~ ^/post_redirect/(.*)$ {
+      internal;
+      proxy_set_header Host $http_host;
+      set $proxy_url http://spiderkeeper:5000/$1;
+      if ($args) {
+        set $proxy_url http://spiderkeeper:5000/$1?$args;
+      }
+      proxy_pass $proxy_url;
+    }
+
+
+
+	location /console/ {
+
+    		proxy_pass http://spiderkeeper:5000/;
+	}
+
+	location /static/css/ {
+                proxy_pass http://spiderkeeper:5000/static/css/;
+        }
+
+	 location /static/js/ {
+                proxy_pass http://spiderkeeper:5000/static/js/;
+        }
+
+	 location /static/fonts/ {
+                proxy_pass http://spiderkeeper:5000/static/fonts/;
+        }
+
+
+	 location /api/_static/css/ {
+                 proxy_pass http://spiderkeeper:5000/api/_static/css/;
+        }
+
+     location /api/_static/lib/ {
+             proxy_pass http://spiderkeeper:5000/api/_static/lib/;
+    }
+
+     location /api/_static/images/ {
+             proxy_pass http://spiderkeeper:5000/api/_static/images/;
+    }
+
+	 location /project {
+                #return 307 $scheme://feeds.xtramile.io/console$request_uri;
+                return 307 $scheme://$http_host/console$request_uri;
+        }
+}
+
+
+
+
+
+
+#    proxy_read_timeout     1200;
+#    proxy_connect_timeout  240;
+#    client_max_body_size   0;
+
+
+
+
+

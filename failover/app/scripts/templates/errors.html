@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h3>Errors:</h3>
+        {% if error_msg %}
+        <div class="errorMessage">{{error_msg}}</div>
+        {% endif %}
+<hr/>
+    <table class="table">
+        <tr>
+            <th>ID</th>
+            <th>Slug</th>
+            <th>Job description</th>
+            <th>Error message</th>
+            <th>Created_at</th>
+            <th>Notification sended</th>
+            <th>Actions</th>
+        </tr>
+        <tr>
+            {% if errors %}
+                {% for error in errors %}
+                <tr>
+                    <td>{{error['id']}}</td>
+                    <td>{{error['slug']}}</td>
+                    <td>{{error['job_description']}}</td>
+                    <td>{{error['error_message']}}</td>
+                    <td> {{error['created_at'] }}</td>
+                    <td>{% if error['notification_sended'] %} Yes {% else %} No {% endif %}</td>
+                    <td>
+                        <a href="/failover/errordelete/{{error['id']}}">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <td colspan="6"> Errors not found </td>
+            {% endif %}
+        </tr>
+    </table>
+
+{% endblock %}

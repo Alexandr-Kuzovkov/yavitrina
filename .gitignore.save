@@ -1,0 +1,13 @@
+*.xml
+*.sqlite
+*.pyc
+*.jl
+*.json
+jobscrapers/.idea
+jobimporters/.idea
+feedgenerator/.idea
+jobscrapers/worldcitiespop.txt
+jobscrapers/test
+jobimporters/dbacc.py
+feedgenerator/dbjobimporters
+
