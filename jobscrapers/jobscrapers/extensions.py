@@ -208,7 +208,7 @@ class PgSQLStore(object):
     dbuser = db['dbuser']
     dbpass = db['dbpass']
 
-    def __init__(self, log_is_enabled=False):
+    def __init__(self, log_is_enabled=False):PgSQLStore
         if log_is_enabled:
             print("log is enabled!")
 
