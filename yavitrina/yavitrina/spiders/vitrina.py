@@ -97,6 +97,12 @@ class VitrinaSpider(scrapy.Spider):
             request = self.getRequest(link, self.parse_sub_category2)
             request.meta['parent'] = url
             yield request
+            img_link = ''.join([self.base_url, img])
+            request_img = self.getRequest(img_link, self.download_image)
+            request_img.meta['filename'] = img_link.split('/').pop()
+            request_img.meta['category_url'] = url
+            yield request_img
+
 
     # parse subcategory2 (ex. Каталог -> Одежда и обувь -> Обувь)
     def parse_sub_category2(self, response):
@@ -154,6 +160,10 @@ class VitrinaSpider(scrapy.Spider):
             request = self.getRequest(link, self.parse_product_page)
             request.meta['parent'] = url
             yield request
+            request_img = self.getRequest(img, self.download_image)
+            request_img.meta['filename'] = '-'.join(img.split('/')[-3:])+'.jpeg'
+            request_img.meta['product_id'] = id
+            yield request_img
 
 
     # parse subcategory3 (ex. Каталог -> Одежда и обувь -> Обувь -> Сандалии)
@@ -194,6 +204,10 @@ class VitrinaSpider(scrapy.Spider):
             request = self.getRequest(link, self.parse_product_page)
             request.meta['parent'] = url
             yield request
+            request_img = self.getRequest(img, self.download_image)
+            request_img.meta['filename'] = '-'.join(img.split('/')[-3:]) + '.jpeg'
+            request_img.meta['product_id'] = id
+            yield request_img
 
     def parse_product_page(self, response):
         title = ' '.join(response.css('div[class="product-page"] div[class="p-info"] h1').xpath('text()').extract())
