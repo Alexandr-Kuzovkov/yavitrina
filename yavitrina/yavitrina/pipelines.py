@@ -22,6 +22,10 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from yavitrina.items import CategoryItem
+from yavitrina.items import TagItem
+from yavitrina.items import ProductCardItem
+from yavitrina.items import ProductItem
+from yavitrina.items import ImageItem
 
 def create_folder(directory):
     logger.debug('Create directory. "%s"' % directory)
@@ -85,37 +89,11 @@ class YavitrinaPipeline(object):
         return item
 
 
-class MyJsonItemExporter(JsonItemExporter):
-
-    def __init__(self, file, **kwargs):
-        super(self.__class__, self).__init__(file, **kwargs)
-
-    def _beautify_newline(self):
-        if self.indent is not None:
-            self.file.write(b'\n')
-
-    def start_exporting(self):
-        self.file.write(b"[")
-        self._beautify_newline()
-
-    def finish_exporting(self):
-        self._beautify_newline()
-        self.file.write(b"]")
-
-    def export_item(self, item):
-        if self.first_item:
-            self.first_item = False
-        else:
-            self.file.write(b',')
-            self._beautify_newline()
-        itemdict = dict(self._get_serialized_fields(item))
-        data = self.encoder.encode(itemdict)
-        self.file.write(to_bytes(data, self.encoding))
-
 class YavitrinaFileExporter(object):
 
     spider = None
     dirname = None
+    sub_folders = {'categories': None, 'images': None, 'products': None, 'tags': None, 'product_card': None, 'images_files': None}
 
     def __init__(self, spider, **kwargs):
         super(self.__class__, self).__init__()
@@ -129,28 +107,99 @@ class YavitrinaFileExporter(object):
         else:
             self.dirname = os.path.sep.join([files_dir, self.spider.name])
         create_folder(self.dirname)
+        for folder in self.sub_folders.keys():
+            item_folder = os.path.sep.join([self.dirname, folder])
+            create_folder(item_folder)
+            self.sub_folders[folder] = item_folder
 
     def finish_exporting(self):
         pass
 
     def export_item(self, item):
         if isinstance(item, CategoryItem):
-            print("!!!is of type CategoryItem")
+            logging.info('saving category item')
             self.save_category_item(item)
+        elif isinstance(item, TagItem):
+            logging.info('saving tag item')
+            self.save_tag_item(item)
+        elif isinstance(item, ProductCardItem):
+            logging.info('saving product card item')
+            self.save_product_card_item(item)
+        elif isinstance(item, ProductItem):
+            logging.info('saving product item')
+            self.save_product_item(item)
+        elif isinstance(item, ImageItem):
+            logging.info('saving image item')
+            self.save_image_item(item)
 
 
     def save_category_item(self, item):
-        category_folder = os.path.sep.join([self.dirname, 'categories'])
-        create_folder(category_folder)
         data = {}
         for key, val in item.items():
             if type(val) is list:
                 data[key] = ' '.join(val)
             else:
                 data[key] = val
-        filename = os.path.sep.join([category_folder, '.'.join([data['url'].replace('/', ''), 'json'])])
+        item_folder = self.sub_folders['categories']
+        filename = os.path.sep.join([item_folder, '.'.join([data['url'].replace('/', ''), 'json'])])
         with open(filename, 'wb') as f:
             f.write(json.dumps(data, sort_keys=True, indent=4))
+
+    def save_tag_item(self, item):
+        data = {}
+        for key, val in item.items():
+            if type(val) is list:
+                data[key] = ' '.join(val)
+            else:
+                data[key] = val
+        item_folder = self.sub_folders['tags']
+        filename = os.path.sep.join([item_folder, '.'.join([data['url'].replace('/', ''), 'json'])])
+        with open(filename, 'wb') as f:
+            f.write(json.dumps(data, sort_keys=True, indent=4))
+
+    def save_product_card_item(self, item):
+        data = {}
+        for key, val in item.items():
+            if type(val) is list:
+                data[key] = ' '.join(val)
+            else:
+                data[key] = val
+        item_folder = self.sub_folders['product_card']
+        filename = os.path.sep.join([item_folder, '.'.join([data['product_id'], 'json'])])
+        with open(filename, 'wb') as f:
+            f.write(json.dumps(data, sort_keys=True, indent=4))
+
+    def save_product_item(self, item):
+        data = {}
+        for key, val in item.items():
+            if type(val) is list:
+                data[key] = ' '.join(val)
+            else:
+                data[key] = val
+        item_folder = self.sub_folders['products']
+        filename = os.path.sep.join([item_folder, '.'.join([data['product_id'], 'json'])])
+        with open(filename, 'wb') as f:
+            f.write(json.dumps(data, sort_keys=True, indent=4))
+
+    def save_image_item(self, item):
+        filename = os.path.sep.join([self.sub_folders['images_files'], item['filename']])
+        if not (os.path.exists(filename) and os.path.isfile(filename)):
+            with open(filename, 'wb') as f1:
+                f1.write(item['data'])
+        data = {}
+        for key, val in item.items():
+            if key == 'data':
+                continue
+            if type(val) is list:
+                data[key] = ' '.join(val)
+            else:
+                data[key] = val
+        data['filename'] = filename
+        item_folder = self.sub_folders['images']
+        filename = os.path.sep.join([item_folder, '.'.join([data['product_id'], 'json'])])
+        with open(filename, 'wb') as f2:
+            f2.write(json.dumps(data, sort_keys=True, indent=4))
+
 
 
 

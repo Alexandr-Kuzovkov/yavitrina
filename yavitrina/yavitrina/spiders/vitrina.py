@@ -14,6 +14,10 @@ import datetime
 import logging
 import urllib
 from yavitrina.items import CategoryItem
+from yavitrina.items import TagItem
+from yavitrina.items import ProductCardItem
+from yavitrina.items import ProductItem
+from yavitrina.items import ImageItem
 
 
 class VitrinaSpider(scrapy.Spider):
@@ -65,6 +69,7 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('url', url)
             l.add_value('title', title)
             l.add_value('img', img)
+            l.add_value('html', response.text)
             yield l.load_item()
             link = ''.join([self.base_url, url])
             request = self.getRequest(link, self.parse_sub_category)
@@ -86,77 +91,152 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('title', title)
             l.add_value('img', img)
             l.add_value('parent', parent)
+            l.add_value('html', response.text)
             yield l.load_item()
-            #link = ''.join([self.base_url, url])
-            #request = self.getRequest(link, self.parse_sub_category2)
-            #request.meta['parent'] = url
-            #yield request
-
+            link = ''.join([self.base_url, url])
+            request = self.getRequest(link, self.parse_sub_category2)
+            request.meta['parent'] = url
+            yield request
 
     # parse subcategory2 (ex. Каталог -> Одежда и обувь -> Обувь)
     def parse_sub_category2(self, response):
-        result_blocks = response.css('div[class="hub-category"] div[class="item hub-item"]').extract()
-        for html in result_blocks:
+        # save tags
+        tags_blocks = response.css('div[class="category-tags"] div a').extract()
+        for html in tags_blocks:
             body = html.encode('utf-8')
             block = response.replace(body=body)
-            url = ' '.join(block.css('div[class="holder"] a[class="name"]').xpath('@href').extract())
-            title = ' '.join(block.css('div[class="holder"] a[class="name"]').xpath('text()').extract())
-            img = ' '.join(block.css('span[class="icon"] img').xpath('@src').extract())
+            url = ' '.join(block.css('a').xpath('@href').extract())
+            title = ' '.join(block.css('a').xpath('text()').extract())
+            l = ItemLoader(item=TagItem(), response=response)
+            l.add_value('url', url)
+            l.add_value('title', title)
+            l.add_value('page', response.url.replace(self.base_url, ''))
+            l.add_value('html', block)
+            yield l.load_item()
+        #save categories
+        cat_blocks = response.css('div[class="aside"]').xpath(u"//span[text() = 'Категории']/parent::div/following-sibling::div/ul/li").extract()
+        for html in cat_blocks:
+            body = html.encode('utf-8')
+            block = response.replace(body=body)
+            url = ' '.join(block.css('li a').xpath('@href').extract())
+            title = ' '.join(block.css('li a').xpath('text()').extract())
             parent = response.meta['parent']
             l = ItemLoader(item=CategoryItem(), response=response)
             l.add_value('url', url)
             l.add_value('title', title)
-            l.add_value('img', img)
             l.add_value('parent', parent)
+            l.add_value('html', block)
             yield l.load_item()
             link = ''.join([self.base_url, url])
             request = self.getRequest(link, self.parse_sub_category3)
             request.meta['parent'] = url
             yield request
+        #save product cards
+        card_blocks = response.css('div[class="products-list"] div.p-card').extract()
+        for html in card_blocks:
+            body = html.encode('utf-8')
+            block = response.replace(body=body)
+            img = ' '.join(block.css('img[class="gaclkimg"]').xpath('@src').extract())
+            url = ' '.join(block.css('a[class="b-info"]').xpath('@href').extract())
+            id = url.split('/').pop()
+            title = ' '.join(block.css('div[class="name"] p[class="datalink clck gaclkname"]').xpath('text()').extract())
+            price = int(' '.join(block.css('span[class="price"] strong[itemprop="price"]').xpath('text()').extract()).replace(' ', '').replace('.', '').encode('ascii','ignore'))
+            l = ItemLoader(item=ProductCardItem(), response=response)
+            l.add_value('img', img)
+            l.add_value('url', url)
+            l.add_value('title', title)
+            l.add_value('price', price)
+            l.add_value('product_id', id)
+            l.add_value('page', response.url.replace(self.base_url, ''))
+            l.add_value('html', block)
+            yield l.load_item()
+            link = ''.join([self.base_url, url])
+            request = self.getRequest(link, self.parse_product_page)
+            request.meta['parent'] = url
+            yield request
 
 
-    # parse subcategory3 (ex. Каталог -> Одежда и обувь -> Обувь -> Женская обувь)
+    # parse subcategory3 (ex. Каталог -> Одежда и обувь -> Обувь -> Сандалии)
     def parse_sub_category3(self, response):
-        result_blocks = response.css('div[class="hub-category"] div[class="item hub-item"]').extract()
-        for html in result_blocks:
+        # save tags
+        tags_blocks = response.css('div[class="category-tags"] div a').extract()
+        for html in tags_blocks:
             body = html.encode('utf-8')
             block = response.replace(body=body)
-            url = ' '.join(block.css('div[class="holder"] a[class="name"]').xpath('@href').extract())
-            title = ' '.join(block.css('div[class="holder"] a[class="name"]').xpath('text()').extract())
-            img = ' '.join(block.css('span[class="icon"] img').xpath('@src').extract())
-            parent = response.meta['parent']
-            l = ItemLoader(item=CategoryItem(), response=response)
+            url = ' '.join(block.css('a').xpath('@href').extract())
+            title = ' '.join(block.css('a').xpath('text()').extract())
+            l = ItemLoader(item=TagItem(), response=response)
             l.add_value('url', url)
             l.add_value('title', title)
+            l.add_value('page', response.url.replace(self.base_url, ''))
+            l.add_value('html', block)
+            yield l.load_item()
+        # save product cards
+        card_blocks = response.css('div[class="products-list"] div.p-card').extract()
+        for html in card_blocks:
+            body = html.encode('utf-8')
+            block = response.replace(body=body)
+            img = ' '.join(block.css('img[class="gaclkimg"]').xpath('@src').extract())
+            url = ' '.join(block.css('a[class="b-info"]').xpath('@href').extract())
+            id = url.split('/').pop()
+            title = ' '.join(block.css('div[class="name"] p[class="datalink clck gaclkname"]').xpath('text()').extract())
+            price = int(' '.join(block.css('span[class="price"] strong[itemprop="price"]').xpath('text()').extract()).replace(' ', '').replace('.', '').encode('ascii', 'ignore'))
+            l = ItemLoader(item=ProductCardItem(), response=response)
             l.add_value('img', img)
-            l.add_value('parent', parent)
+            l.add_value('url', url)
+            l.add_value('title', title)
+            l.add_value('price', price)
+            l.add_value('product_id', id)
+            l.add_value('page', response.url.replace(self.base_url, ''))
+            l.add_value('html', block)
             yield l.load_item()
             link = ''.join([self.base_url, url])
-            request = self.getRequest(link, self.parse_sub_category3)
+            request = self.getRequest(link, self.parse_product_page)
             request.meta['parent'] = url
             yield request
 
-
-    # parse subcategory4 (ex. Каталог -> Одежда и обувь -> Обувь -> Женская обувь -> Сандалии)
-    def parse_sub_category4(self, response):
-        result_blocks = response.css('div[class="hub-category"] div[class="item hub-item"]').extract()
-        for html in result_blocks:
-            body = html.encode('utf-8')
-            block = response.replace(body=body)
-            url = ' '.join(block.css('div[class="holder"] a[class="name"]').xpath('@href').extract())
-            title = ' '.join(block.css('div[class="holder"] a[class="name"]').xpath('text()').extract())
-            img = ' '.join(block.css('span[class="icon"] img').xpath('@src').extract())
-            parent = response.meta['parent']
-            l = ItemLoader(item=CategoryItem(), response=response)
-            l.add_value('url', url)
-            l.add_value('title', title)
-            l.add_value('img', img)
-            l.add_value('parent', parent)
-            yield l.load_item()
-            link = ''.join([self.base_url, url])
-            request = self.getRequest(link, self.parse_sub_category3)
-            request.meta['parent'] = url
+    def parse_product_page(self, response):
+        title = ' '.join(response.css('div[class="product-page"] div[class="p-info"] h1').xpath('text()').extract())
+        description = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="desc"] p[class="d-text"]').xpath('text()').extract())
+        price = int(' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="info-detail"] span[itemprop="price"]').xpath('@content').extract()))
+        shop_link = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="btn-box"] a[class="btn btn-in-shops"]').xpath('@href').extract())
+        shop_link2 = ' '.join(response.css('div[class="product_tabs"] section[id="content1"] a').xpath('@href').extract())
+        parameters = response.css('div[class="product_tabs"] section[id="content2"] article span').xpath('text()').extract()
+        feedbacks = '##@@@!!!'.join(response.css('div[class="product_tabs"] section[id="content3"] article div[class="_1qMiEXz _17VRAZ_"]').extract())
+        product_id = response.url.split('/').pop()
+        l = ItemLoader(item=ProductItem(), response=response)
+        l.add_value('product_id', product_id)
+        l.add_value('html', response.text)
+        l.add_value('url', response.url)
+        l.add_value('title', title)
+        l.add_value('description', description)
+        l.add_value('price', price)
+        l.add_value('shop_link', shop_link)
+        l.add_value('shop_link2', shop_link2)
+        l.add_value('parameters', parameters)
+        l.add_value('feedbacks', feedbacks)
+        yield l.load_item()
+        #save images
+        image_urls = response.css('div[class="photos"] img').xpath('@src').extract()
+        for link in image_urls:
+            request = self.getRequest(link, self.download_image)
+            request.meta['product_id'] = product_id
+            request.meta['filename'] = '-'.join(response.url.split('/')[-3:])+'.jpeg'
             yield request
+
+
+    def download_image(self, response):
+        Item = ImageItem()
+        if 'product_id' in response.meta:
+            Item['product_id'] = response.meta['product_id']
+        if 'category_url' in response.meta:
+            Item['category_url'] = response.meta['category_url']
+        Item['filename'] = response.meta['filename']
+        Item['data'] = response.body
+        Item['url'] = response.url
+        yield Item
+
+
 
 
 
