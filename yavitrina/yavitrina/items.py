@@ -50,3 +50,4 @@ class ImageItem(scrapy.Item):
     product_id = scrapy.Field()
     category_url = scrapy.Field()
     data = scrapy.Field()
+    filename = scrapy.Field()

@@ -161,7 +161,7 @@ class YavitrinaFileExporter(object):
         data = {}
         for key, val in item.items():
             if type(val) is list:
-                data[key] = ' '.join(val)
+                data[key] = ' '.join(map(lambda i: str(i), val))
             else:
                 data[key] = val
         item_folder = self.sub_folders['product_card']
@@ -173,7 +173,7 @@ class YavitrinaFileExporter(object):
         data = {}
         for key, val in item.items():
             if type(val) is list:
-                data[key] = ' '.join(val)
+                data[key] = ' '.join(map(lambda i: str(i), val))
             else:
                 data[key] = val
         item_folder = self.sub_folders['products']
@@ -191,12 +191,15 @@ class YavitrinaFileExporter(object):
             if key == 'data':
                 continue
             if type(val) is list:
-                data[key] = ' '.join(val)
+                data[key] = ' '.join(map(lambda i: str(i), val))
             else:
                 data[key] = val
-        data['filename'] = filename
+        data['path'] = filename
         item_folder = self.sub_folders['images']
-        filename = os.path.sep.join([item_folder, '.'.join([data['product_id'], 'json'])])
+        if 'product_id' in data:
+            filename = os.path.sep.join([item_folder, '.'.join([data['product_id'], 'json'])])
+        elif 'category_url' in data:
+            filename = os.path.sep.join([item_folder, '.'.join([data['category_url'], 'json'])])
         with open(filename, 'wb') as f2:
             f2.write(json.dumps(data, sort_keys=True, indent=4))
 

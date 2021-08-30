@@ -117,7 +117,7 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('url', url)
             l.add_value('title', title)
             l.add_value('page', response.url.replace(self.base_url, ''))
-            l.add_value('html', block)
+            l.add_value('html', block.text)
             yield l.load_item()
         #save categories
         cat_blocks = response.css('div[class="aside"]').xpath(u"//span[text() = 'Категории']/parent::div/following-sibling::div/ul/li").extract()
@@ -131,7 +131,7 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('url', url)
             l.add_value('title', title)
             l.add_value('parent', parent)
-            l.add_value('html', block)
+            l.add_value('html', block.text)
             yield l.load_item()
             link = ''.join([self.base_url, url])
             request = self.getRequest(link, self.parse_sub_category3)
@@ -154,7 +154,7 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('price', price)
             l.add_value('product_id', id)
             l.add_value('page', response.url.replace(self.base_url, ''))
-            l.add_value('html', block)
+            l.add_value('html', block.text)
             yield l.load_item()
             link = ''.join([self.base_url, url])
             request = self.getRequest(link, self.parse_product_page)
@@ -179,7 +179,7 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('url', url)
             l.add_value('title', title)
             l.add_value('page', response.url.replace(self.base_url, ''))
-            l.add_value('html', block)
+            l.add_value('html', block.text)
             yield l.load_item()
         # save product cards
         card_blocks = response.css('div[class="products-list"] div.p-card').extract()
@@ -198,12 +198,14 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('price', price)
             l.add_value('product_id', id)
             l.add_value('page', response.url.replace(self.base_url, ''))
-            l.add_value('html', block)
+            l.add_value('html', block.text)
             yield l.load_item()
             link = ''.join([self.base_url, url])
             request = self.getRequest(link, self.parse_product_page)
             request.meta['parent'] = url
             yield request
+            if img.startswith('//'):
+                img = 'https:{img}'.format(img=img)
             request_img = self.getRequest(img, self.download_image)
             request_img.meta['filename'] = '-'.join(img.split('/')[-3:]) + '.jpeg'
             request_img.meta['product_id'] = id
