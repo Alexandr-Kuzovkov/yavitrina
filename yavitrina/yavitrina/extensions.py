@@ -145,7 +145,32 @@ class PgSQLBase(object):
 
 
 class PgSQLStore(PgSQLBase):
-    pass
+
+    def clear_db(self):
+        tables = self._get_tables_list()
+        for table in tables:
+            if table in ['alembic_version']:
+                continue
+            self._clear_table(table)
+
+    def save_category_item(self, data):
+        self._insert('category', [data])
+
+    def save_tag_item(self, data):
+        self._insert('tag', [data])
+
+    def save_product_card_item(self, data):
+        self._insert('product_card', [data])
+
+    def save_product_item(self, data):
+        self._insert('product', [data])
+
+    def save_image_item(self, data):
+        self._insert('image', [data])
+
+
+
+
 
 
 

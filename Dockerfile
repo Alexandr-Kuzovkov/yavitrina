@@ -24,4 +24,5 @@ RUN chmod +x /usr/local/bin/start.sh
 RUN mkdir /etc/scrapyd
 RUN pip install scrapyd-client
 RUN sed -i "s/scrapy.utils.http/w3lib.http/g" /usr/local/bin/scrapyd-deploy
+RUN pip install alembic
 CMD ["/usr/local/bin/start.sh"]

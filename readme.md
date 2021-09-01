@@ -788,6 +788,38 @@ from w3lib.http import basic_auth_header
 ```
 -----------------------------
 
+###Database migration tools
+------------------------------
+[alembic]()https://alembic.sqlalchemy.org/en/latest/tutorial.html)
+
+
+Install:
+```bash
+cd /scrapy/yavitrina
+mkdir alembic
+alembic init alembic
+#edit alembic.ini
+nano alembic.ini
+# edit line 
+# sqlalchemy.url = postgresql://dbuser:dbpass/dbname
+# ex.:
+# sqlalchemy.url = postgresql://vitrina:xxxxxxx/vitrina
+```
+
+Create migration:
+```bash
+cd /scrapy/yavitrina
+alembic revision -m "add category column"
+chmod -R a+w alembic/versions/
+```
+
+Run migration:
+```bash
+alembic upgrade head
+```
+
+------------------------------
+
 
 
 

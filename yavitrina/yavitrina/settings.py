@@ -23,8 +23,8 @@ ROBOTSTXT_OBEY = False
 
 #DUPEFILTER_DEBUG = True
 
-#LOG_LEVEL = 'INFO'
-LOG_LEVEL = 'DEBUG'
+LOG_LEVEL = 'INFO'
+#LOG_LEVEL = 'DEBUG'
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 #CONCURRENT_REQUESTS = 32
@@ -48,7 +48,7 @@ SPLASH_URL = 'http://hub.kuzovkov12.ru:8050/'
 HTTPERROR_ALLOWED_CODES =[400,404]
 
 FILES_DIR = 'files'
-INI_FILE = '/home/root/config.ini'
+INI_FILE = '/home/root/vitrina.config.ini'
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
@@ -97,7 +97,7 @@ AUTOTHROTTLE_ENABLED = True
 # The initial download delay
 AUTOTHROTTLE_START_DELAY = 0.5
 # The maximum download delay to be set in case of high latencies
-AUTOTHROTTLE_MAX_DELAY = 3
+AUTOTHROTTLE_MAX_DELAY = 2
 # The average number of requests Scrapy should be sending in parallel to
 # each remote server
 AUTOTHROTTLE_TARGET_CONCURRENCY = 0.5

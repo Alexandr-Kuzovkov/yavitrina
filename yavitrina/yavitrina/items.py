@@ -43,6 +43,7 @@ class ProductItem(scrapy.Item):
     description = scrapy.Field()
     parameters = scrapy.Field()
     feedbacks = scrapy.Field()
+    category = scrapy.Field()
 
 class ImageItem(scrapy.Item):
     url = scrapy.Field()

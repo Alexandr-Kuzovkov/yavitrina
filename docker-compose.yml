@@ -78,9 +78,29 @@ services:
         max-file: "1"
     restart: unless-stopped
 
+  db:
+    image: postgres:12.1
+    environment:
+      POSTGRES_PASSWORD: P@ssw0rd
+      POSTGRES_USER: vitrina
+      POSTGRES_DB: vitrina
+    volumes:
+      - ./docker/db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./docker/db/dumps:/dumps
+      - ./docker/db/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./docker/db/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./docker/db/pg_ident.conf:/etc/postgresql/pg_ident.conf
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "65432:5432"
+    networks:
+      - back
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+
 networks:
   back:
     driver: bridge
 
 volumes:
   logs: {}
+  db-data: {}

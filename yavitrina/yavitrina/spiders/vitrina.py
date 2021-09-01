@@ -35,13 +35,16 @@ class VitrinaSpider(scrapy.Spider):
     es_exporter = None
     base_url = 'https://yavitrina.ru'
     lua_src = pkgutil.get_data('yavitrina', 'lua/html-render.lua')
+    clear_db = False
 
-    def __init__(self, drain=False, noproxy=False, *args, **kwargs):
+    def __init__(self, drain=False, noproxy=False, cleardb=False, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
         if drain:
             self.drain = True
         if noproxy:
             self.use_splash = False
+        if cleardb:
+            self.clear_db = True
 
     def getRequest(self, url, callback):
         if self.use_splash:
@@ -64,7 +67,10 @@ class VitrinaSpider(scrapy.Spider):
             block = response.replace(body=body)
             url = ' '.join(block.css('a').xpath('@href').extract())
             title = ' '.join(block.css('span[class="name"]').xpath('text()').extract())
-            img = ' '.join(block.css('span[class="icon"]').extract())
+            img = ' '.join(block.css('span[class="icon"] img').xpath('@src').extract())
+            if len(img) == 0:
+                img = ' '.join(block.css('span[class="icon"]').extract())
+                img = img[img.find('xlink:href') + 12:img.find('</use>') - 2]
             l = ItemLoader(item=CategoryItem(), response=response)
             l.add_value('url', url)
             l.add_value('title', title)
@@ -75,6 +81,14 @@ class VitrinaSpider(scrapy.Spider):
             request = self.getRequest(link, self.parse_sub_category)
             request.meta['parent'] = url
             yield request
+            last = img.split('/').pop()
+            filename = last[:last.find('#')]
+            img_link = ''.join([self.base_url, img])
+            request = self.getRequest(img_link, self.download_image)
+            request.meta['filename'] = filename
+            request.meta['category_url'] = url
+            yield request
+
 
     # parse subcategory (ex. Каталог -> Одежда и обувь)
     def parse_sub_category(self, response):
@@ -160,9 +174,12 @@ class VitrinaSpider(scrapy.Spider):
             request = self.getRequest(link, self.parse_product_page)
             request.meta['parent'] = url
             yield request
-            request_img = self.getRequest(img, self.download_image)
-            request_img.meta['filename'] = '-'.join(img.split('/')[-3:])+'.jpeg'
+            if img.startswith('//'):
+                img = 'https:{img}'.format(img=img)
+            request_img = scrapy.Request(img, self.download_image)
+            request_img.meta['filename'] = '-'.join(img.split('/')[-3:])
             request_img.meta['product_id'] = id
+            request_img.meta['autotype'] = True
             yield request_img
 
 
@@ -206,9 +223,10 @@ class VitrinaSpider(scrapy.Spider):
             yield request
             if img.startswith('//'):
                 img = 'https:{img}'.format(img=img)
-            request_img = self.getRequest(img, self.download_image)
-            request_img.meta['filename'] = '-'.join(img.split('/')[-3:]) + '.jpeg'
+            request_img = scrapy.Request(img, self.download_image)
+            request_img.meta['filename'] = '-'.join(img.split('/')[-3:])
             request_img.meta['product_id'] = id
+            request_img.meta['autotype'] = True
             yield request_img
 
     def parse_product_page(self, response):
@@ -220,6 +238,7 @@ class VitrinaSpider(scrapy.Spider):
         parameters = response.css('div[class="product_tabs"] section[id="content2"] article span').xpath('text()').extract()
         feedbacks = '##@@@!!!'.join(response.css('div[class="product_tabs"] section[id="content3"] article div[class="_1qMiEXz _17VRAZ_"]').extract())
         product_id = response.url.split('/').pop()
+        categories = response.css('div[class="b-top"] li[class="breadcrumbs-item"] a').xpath('@href').extract()
         l = ItemLoader(item=ProductItem(), response=response)
         l.add_value('product_id', product_id)
         l.add_value('html', response.text)
@@ -231,15 +250,17 @@ class VitrinaSpider(scrapy.Spider):
         l.add_value('shop_link2', shop_link2)
         l.add_value('parameters', parameters)
         l.add_value('feedbacks', feedbacks)
+        for category in categories:
+            l.add_value('category', category)
         yield l.load_item()
         #save images
         image_urls = response.css('div[class="photos"] img').xpath('@src').extract()
         for link in image_urls:
-            request = self.getRequest(link, self.download_image)
+            request = scrapy.Request(link, self.download_image)
             request.meta['product_id'] = product_id
-            request.meta['filename'] = '-'.join(response.url.split('/')[-3:])+'.jpeg'
+            request.meta['filename'] = '-'.join(link.split('/')[-3:])
+            request.meta['autotype'] = True
             yield request
-
 
     def download_image(self, response):
         Item = ImageItem()
@@ -247,7 +268,12 @@ class VitrinaSpider(scrapy.Spider):
             Item['product_id'] = response.meta['product_id']
         if 'category_url' in response.meta:
             Item['category_url'] = response.meta['category_url']
-        Item['filename'] = response.meta['filename']
+        if 'autotype' in response.meta and response.meta['autotype']:
+            filename = response.meta['filename']
+            ext = response.headers['Content-Type'].split('/').pop()
+            Item['filename'] = '.'.join([filename, ext])
+        else:
+            Item['filename'] = response.meta['filename']
         Item['data'] = response.body
         Item['url'] = response.url
         yield Item

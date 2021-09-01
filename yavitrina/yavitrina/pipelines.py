@@ -26,6 +26,9 @@ from yavitrina.items import TagItem
 from yavitrina.items import ProductCardItem
 from yavitrina.items import ProductItem
 from yavitrina.items import ImageItem
+from scrapy.exceptions import CloseSpider
+from yavitrina.config import load_config
+from yavitrina.extensions import PgSQLStore
 
 def create_folder(directory):
     logger.debug('Create directory. "%s"' % directory)
@@ -57,9 +60,19 @@ def get_current_date():
 
 class YavitrinaPipeline(object):
 
+    files = {}
+    feed_name = ''
+    config = None
+
     def __init__(self):
         self.files = {}
         self.feed_name = ''
+        CONFIG_FILE = '/home/root/vitrina.config.ini'
+        try:
+            self.config = load_config(CONFIG_FILE)
+        except Exception as ex:
+            logging.error(ex.message)
+            raise CloseSpider(ex.message)
 
     @classmethod
     def from_crawler(self, crawler):
@@ -70,7 +83,8 @@ class YavitrinaPipeline(object):
         return pipeline
 
     def spider_opened(self, spider):
-        self.exporter = YavitrinaFileExporter(spider)
+        #self.exporter = YavitrinaFileExporter(spider)
+        self.exporter = YavitrinaPgSqlExporter(spider, self.config)
         self.exporter.start_exporting()
 
 
@@ -130,6 +144,7 @@ class YavitrinaFileExporter(object):
             self.save_product_item(item)
         elif isinstance(item, ImageItem):
             logging.info('saving image item')
+            #pprint(item)
             self.save_image_item(item)
 
 
@@ -137,7 +152,7 @@ class YavitrinaFileExporter(object):
         data = {}
         for key, val in item.items():
             if type(val) is list:
-                data[key] = ' '.join(val)
+                data[key] = u','.join(val)
             else:
                 data[key] = val
         item_folder = self.sub_folders['categories']
@@ -149,7 +164,7 @@ class YavitrinaFileExporter(object):
         data = {}
         for key, val in item.items():
             if type(val) is list:
-                data[key] = ' '.join(val)
+                data[key] = u','.join(val)
             else:
                 data[key] = val
         item_folder = self.sub_folders['tags']
@@ -161,7 +176,7 @@ class YavitrinaFileExporter(object):
         data = {}
         for key, val in item.items():
             if type(val) is list:
-                data[key] = ' '.join(map(lambda i: str(i), val))
+                data[key] = u','.join(map(lambda i: unicode(i), val))
             else:
                 data[key] = val
         item_folder = self.sub_folders['product_card']
@@ -173,7 +188,7 @@ class YavitrinaFileExporter(object):
         data = {}
         for key, val in item.items():
             if type(val) is list:
-                data[key] = ' '.join(map(lambda i: str(i), val))
+                data[key] = u','.join(map(lambda i: unicode(i), val))
             else:
                 data[key] = val
         item_folder = self.sub_folders['products']
@@ -191,7 +206,7 @@ class YavitrinaFileExporter(object):
             if key == 'data':
                 continue
             if type(val) is list:
-                data[key] = ' '.join(map(lambda i: str(i), val))
+                data[key] = ','.join(map(lambda i: str(i), val))
             else:
                 data[key] = val
         data['path'] = filename
@@ -202,6 +217,102 @@ class YavitrinaFileExporter(object):
             filename = os.path.sep.join([item_folder, '.'.join([data['category_url'], 'json'])])
         with open(filename, 'wb') as f2:
             f2.write(json.dumps(data, sort_keys=True, indent=4))
+
+
+class YavitrinaPgSqlExporter(object):
+
+    spider = None
+    dirname = None
+    sub_folders = {'images_files': None}
+    config = None
+    db = None
+
+    def __init__(self, spider, config, **kwargs):
+        super(self.__class__, self).__init__()
+        self.spider = spider
+        self.config = config
+
+    def start_exporting(self):
+        files_dir = self.spider.settings.get('FILES_DIR', 'files')
+        create_folder(files_dir)
+        if hasattr(self.spider, 'dirname') and self.spider.dirname is not None:
+            self.dirname = os.path.sep.join([files_dir, self.spider.dirname])
+        else:
+            self.dirname = os.path.sep.join([files_dir, self.spider.name])
+        create_folder(self.dirname)
+        for folder in self.sub_folders.keys():
+            item_folder = os.path.sep.join([self.dirname, folder])
+            create_folder(item_folder)
+            self.sub_folders[folder] = item_folder
+        db_conf = {
+            'dbname':self.config['DATABASE']['DB_NAME'],
+            'dbuser':self.config['DATABASE']['DB_USER'],
+            'dbhost':self.config['DATABASE']['DB_HOST'],
+            'dbport':self.config['DATABASE']['DB_PORT'],
+            'dbpass':self.config['DATABASE']['DB_PASS']
+        }
+        self.db = PgSQLStore(db_conf)
+        if self.spider.clear_db:
+            self.db.clear_db()
+
+    def finish_exporting(self):
+        pass
+
+    def export_item(self, item):
+        if isinstance(item, CategoryItem):
+            logging.info('saving category item')
+            self.save_category_item(item)
+        elif isinstance(item, TagItem):
+            logging.info('saving tag item')
+            self.save_tag_item(item)
+        elif isinstance(item, ProductCardItem):
+            logging.info('saving product card item')
+            self.save_product_card_item(item)
+        elif isinstance(item, ProductItem):
+            logging.info('saving product item')
+            self.save_product_item(item)
+        elif isinstance(item, ImageItem):
+            logging.info('saving image item')
+            #pprint(item)
+            self.save_image_item(item)
+
+
+    def save_category_item(self, item):
+        data = {}
+        mapping = {'parent': 'parent_url'}
+        for key, val in item.items():
+            if key in mapping:
+                key = mapping[key]
+            if type(val) is list:
+                data[key] = u','.join(val)
+            else:
+                data[key] = val
+        self.db.save_category_item(data)
+
+    def save_tag_item(self, item):
+        pass
+
+    def save_product_card_item(self, item):
+        pass
+
+    def save_product_item(self, item):
+        pass
+
+    def save_image_item(self, item):
+        filename = os.path.sep.join([self.sub_folders['images_files'], item['filename']])
+        if not (os.path.exists(filename) and os.path.isfile(filename)):
+            with open(filename, 'wb') as f1:
+                f1.write(item['data'])
+        data = {}
+        for key, val in item.items():
+            if key == 'data':
+                continue
+            if type(val) is list:
+                data[key] = ','.join(map(lambda i: str(i), val))
+            else:
+                data[key] = val
+        data['path'] = filename
+        self.db.save_image_item(data)
 
 
 
