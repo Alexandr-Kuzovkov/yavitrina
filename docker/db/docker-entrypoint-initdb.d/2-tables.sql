@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS category
     created_at timestamp with time zone default now() not null,
     title VARCHAR(255) NOT NULL,
     parent_id BIGINT,
-    parent_url VARCHAR(255)
+    parent_url VARCHAR(255),
+    img VARCHAR(255)
 );
 
 ALTER TABLE category OWNER TO "vitrina";
@@ -18,7 +19,8 @@ CREATE TABLE IF NOT EXISTS tag
     html TEXT,
     created_at timestamp with time zone default now() not null,
     title VARCHAR(255) NOT NULL,
-    updated_at timestamp with time zone
+    updated_at timestamp with time zone,
+    page VARCHAR(255)
 );
 
 
@@ -33,8 +35,9 @@ CREATE TABLE IF NOT EXISTS image
     url VARCHAR(255) NOT NULL,
     path VARCHAR(255) NOT NULL,
     created_at timestamp with time zone default now() not null,
-    product_id VARCHAR(255) NOT NULL,
-    filename VARCHAR(255) NOT NULL
+    product_id VARCHAR(255),
+    filename VARCHAR(255) NOT NULL,
+    category_url VARCHAR(255)
 );
 
 ALTER TABLE image OWNER TO "vitrina";
@@ -65,11 +68,12 @@ CREATE TABLE IF NOT EXISTS product
     description TEXT,
     price NUMERIC(15,2),
     product_id VARCHAR(255) NOT NULL,
-    category VARCHAR(255) NOT NULL,
+    category VARCHAR(255),
     category_id BIGINT,
-    shop_link VARCHAR(255),
-    shop_link2 VARCHAR(255),
-    parameters TEXT
+    shop_link TEXT,
+    shop_link2 TEXT,
+    parameters TEXT,
+    feedbacks TEXT
 );
 
 ALTER TABLE product OWNER TO "vitrina";

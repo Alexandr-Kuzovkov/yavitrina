@@ -260,19 +260,19 @@ class YavitrinaPgSqlExporter(object):
 
     def export_item(self, item):
         if isinstance(item, CategoryItem):
-            logging.info('saving category item')
+            logging.debug('saving category item')
             self.save_category_item(item)
         elif isinstance(item, TagItem):
-            logging.info('saving tag item')
+            logging.debug('saving tag item')
             self.save_tag_item(item)
         elif isinstance(item, ProductCardItem):
-            logging.info('saving product card item')
+            logging.debug('saving product card item')
             self.save_product_card_item(item)
         elif isinstance(item, ProductItem):
-            logging.info('saving product item')
+            logging.debug('saving product item')
             self.save_product_item(item)
         elif isinstance(item, ImageItem):
-            logging.info('saving image item')
+            logging.debug('saving image item')
             #pprint(item)
             self.save_image_item(item)
 
@@ -287,16 +287,43 @@ class YavitrinaPgSqlExporter(object):
                 data[key] = u','.join(val)
             else:
                 data[key] = val
-        self.db.save_category_item(data)
+        self.db.save_category(data)
 
     def save_tag_item(self, item):
-        pass
+        data = {}
+        mapping = {}
+        for key, val in item.items():
+            if key in mapping:
+                key = mapping[key]
+            if type(val) is list:
+                data[key] = u','.join(map(lambda i: unicode(i), val))
+            else:
+                data[key] = val
+        self.db.save_tag(data)
 
     def save_product_card_item(self, item):
-        pass
+        data = {}
+        mapping = {}
+        for key, val in item.items():
+            if key in mapping:
+                key = mapping[key]
+            if type(val) is list:
+                data[key] = u','.join(map(lambda i: unicode(i), val))
+            else:
+                data[key] = val
+        self.db.save_product_card(data)
 
     def save_product_item(self, item):
-        pass
+        data = {}
+        mapping = {}
+        for key, val in item.items():
+            if key in mapping:
+                key = mapping[key]
+            if type(val) is list:
+                data[key] = u','.join(map(lambda i: unicode(i), val))
+            else:
+                data[key] = val
+        self.db.save_product(data)
 
     def save_image_item(self, item):
         filename = os.path.sep.join([self.sub_folders['images_files'], item['filename']])
@@ -312,7 +339,7 @@ class YavitrinaPgSqlExporter(object):
             else:
                 data[key] = val
         data['path'] = filename
-        self.db.save_image_item(data)
+        self.db.save_image(data)
 
 
 
