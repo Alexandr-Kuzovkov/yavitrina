@@ -41,11 +41,11 @@ class PgSQLBase(object):
             self.dbclose()
         return res
 
-    def _get(self, table, field_list=None, tail='', data=None):
+    def _get(self, table, field_list=None, where='', data=None):
         self.dbopen()
         if field_list is None:
             field_list = self._get_fld_list(table)
-        sql = ' '.join(['SELECT', ','.join(field_list), 'FROM', table, tail, ';'])
+        sql = ' '.join(['SELECT', ','.join(field_list), 'FROM', table, 'WHERE', where, ';'])
         if data is None:
             self.cur.execute(sql)
         elif type(data) is tuple or type(data) is list:
@@ -154,22 +154,50 @@ class PgSQLStore(PgSQLBase):
             self._clear_table(table)
 
     def save_category(self, data):
+        if 'parent_url' in data:
+            res = self._get('category', field_list=['id'], where='url=%s', data=[data['parent_url']])
+            if len(res) > 0:
+                data['parent_id'] = res[0]['id']
         self._insert('category', [data])
 
     def save_tag(self, data):
-        self._insert('tag', [data])
+        res = self._get('tag', field_list=None, where='title=%s', data=[data['title']])
+        if len(res) > 0:
+            tag = res[0]
+            if tag['page'] is not None:
+                pages = tag['page'].split(',')
+                pages.append(data['page'])
+                data['page'] = ','.join(pages)
+                sql = "UPDATE tag SET page=%s WHERE id=%s"
+                self.dbopen()
+                self.cur.execute(sql, [data['page'], tag['id']])
+                self.conn.commit()
+        else:
+            self._insert('tag', [data])
 
     def save_product_card(self, data):
-        self._insert('product_card', [data])
+        res = self._get('product_card', field_list=None, where='product_id=%s', data=[data['product_id']])
+        if len(res) > 0:
+            product_card = res[0]
+            if product_card['page'] is not None:
+                pages = product_card['page'].split(',')
+                pages.append(data['page'])
+                data['page'] = ','.join(pages)
+                sql = "UPDATE product_card SET page=%s WHERE id=%s"
+                self.dbopen()
+                self.cur.execute(sql, [data['page'], product_card['id']])
+                self.conn.commit()
+        else:
+            self._insert('product_card', [data])
 
     def save_product(self, data):
+        res = self._get('category', field_list=['id'], where='url=%s', data=[data['category']])
+        if len(res) > 0:
+            data['category_id'] = res[0]['id']
         self._insert('product', [data])
 
     def save_image(self, data):
         self._insert('image', [data])
-
-
-
 
 
 

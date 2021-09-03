@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS tag
     created_at timestamp with time zone default now() not null,
     title VARCHAR(255) NOT NULL,
     updated_at timestamp with time zone,
-    page VARCHAR(255)
+    page TEXT
 );
 
 
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS product_card
     html TEXT,
     created_at timestamp with time zone default now() not null,
     title VARCHAR(255) NOT NULL,
-    page VARCHAR(255) NOT NULL,
+    page TEXT NOT NULL,
     price NUMERIC(15,2),
     product_id VARCHAR(255) NOT NULL,
     img VARCHAR(255) NOT NULL

@@ -173,6 +173,7 @@ class VitrinaSpider(scrapy.Spider):
             link = ''.join([self.base_url, url])
             request = self.getRequest(link, self.parse_product_page)
             request.meta['parent'] = url
+            request.meta['category'] = response.url.replace(self.base_url, '')
             yield request
             if img.startswith('//'):
                 img = 'https:{img}'.format(img=img)
@@ -220,6 +221,7 @@ class VitrinaSpider(scrapy.Spider):
             link = ''.join([self.base_url, url])
             request = self.getRequest(link, self.parse_product_page)
             request.meta['parent'] = url
+            request.meta['category'] = response.url.replace(self.base_url, '')
             yield request
             if img.startswith('//'):
                 img = 'https:{img}'.format(img=img)
@@ -250,8 +252,12 @@ class VitrinaSpider(scrapy.Spider):
         l.add_value('shop_link2', shop_link2)
         l.add_value('parameters', parameters)
         l.add_value('feedbacks', feedbacks)
-        for category in categories:
-            l.add_value('category', category)
+        if len(categories) > 0:
+            for category in categories:
+                l.add_value('category', category)
+                break
+        elif 'category' in response.meta:
+            l.add_value('category', response.meta['category'])
         yield l.load_item()
         #save images
         image_urls = response.css('div[class="photos"] img').xpath('@src').extract()
