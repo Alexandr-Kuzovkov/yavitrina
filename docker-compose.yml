@@ -53,7 +53,7 @@ services:
       - back
     volumes:
       - ./home:/home/root
-      - /home/ubuntu/config.ini:/home/root/config.ini
+      - /home/ubuntu/vitrina.config.ini:/home/root/config.ini
       - /home/ubuntu/logs:/home/root/logs
     logging:
       driver: "json-file"

@@ -17,11 +17,6 @@ from functools import wraps
 
 from SpiderKeeper.app import db, api, agent, app, config
 from SpiderKeeper.app.spider.model import JobInstance, Project, JobExecution, SpiderInstance, JobRunType
-from SpiderKeeper.app.fibois.helper import get_stat, get_stat_by_jobboards, get_stat_by_date, get_stat_by_jb_date
-from SpiderKeeper.app.fibois.helper import get_jobboards, get_stat_by_keywords, get_count_for_jobboard,  get_keywords
-from SpiderKeeper.app.fibois.helper import get_count_for_jobboard_per_status, get_count_for_date_per_status, get_parsed_count_for_date
-from SpiderKeeper.app.fibois.helper import get_dates, get_count_for_date, get_count_for_jb_date, get_count_for_keywords
-from SpiderKeeper.app.fibois.helper import get_expired_for_jobboard, get_expired_total
 from pprint import pprint
 api_spider_bp = Blueprint('spider', __name__)
 

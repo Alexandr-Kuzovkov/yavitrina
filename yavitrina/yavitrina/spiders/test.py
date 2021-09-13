@@ -13,6 +13,8 @@ import html2text
 import datetime
 import logging
 import urllib
+import urlparse
+import requests
 from yavitrina.items import CategoryItem
 from yavitrina.items import TagItem
 from yavitrina.items import ProductCardItem
@@ -52,7 +54,7 @@ class TestSpider(scrapy.Spider):
         return request
 
     def start_requests(self):
-        url = 'https://yavitrina.ru/product/1732559493'
+        url = 'https://yavitrina.ru/product/674779192'
         request = self.getRequest(url, self.parse_product_page)
         yield request
 
@@ -66,6 +68,18 @@ class TestSpider(scrapy.Spider):
         feedbacks = '##@@@!!!'.join(response.css('div[class="product_tabs"] section[id="content3"] article div[class="_1qMiEXz _17VRAZ_"]').extract())
         product_id = response.url.split('/').pop()
         categories = response.css('div[class="b-top"] li[class="breadcrumbs-item"] a').xpath('@href').extract()
+        parsed = urlparse.urlparse(shop_link)
+        try:
+            vid = urlparse.parse_qs(parsed.query)['vid'][0]
+            pprint(vid)
+            spec_url = 'https://aflt.market.yandex.ru/widget/multi/api/initByType/specifications?themeId=1&specificationGroups=3&vid={vid}&metrikaCounterId=43180609'.format(vid=vid)
+            #request = self.getRequest(spec_url, self.handle_spec)
+            #yield request
+            pprint(spec_url)
+            res = requests.get(spec_url, headers={'user-agent': self.settings.get('USER_AGENT'), 'referer': 'https://yavitrina.ru/product/674779192', 'origin': 'https://yavitrina.ru'})
+            pprint(res.text)
+        except Exception:
+            self.logger.info('parse vid error')
         l = ItemLoader(item=ProductItem(), response=response)
         l.add_value('product_id', product_id)
         l.add_value('html', response.text)
@@ -106,6 +120,12 @@ class TestSpider(scrapy.Spider):
         Item['data'] = response.body
         Item['url'] = response.url
         yield Item
+
+    def handle_spec(self, response):
+        pprint('!!!handle_spec')
+        pprint(response.text)
+
+
 
 
 
