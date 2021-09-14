@@ -17,6 +17,7 @@ from functools import wraps
 
 from SpiderKeeper.app import db, api, agent, app, config
 from SpiderKeeper.app.spider.model import JobInstance, Project, JobExecution, SpiderInstance, JobRunType
+from SpiderKeeper.app.vitrina.helper import get_dates, get_stat, get_count_for_date
 from pprint import pprint
 api_spider_bp = Blueprint('spider', __name__)
 
@@ -703,13 +704,18 @@ def service_stats(project_id):
     run_stats = JobExecution.list_run_stats_by_hours(project_id)
     return render_template("server_stats.html", run_stats=run_stats)
 
-@app.route("/fibois/stats")
+@app.route("/vitrina/stats")
 def fibois_stats():
     stat = get_stat()
     dates = get_dates()
-    jobboards = get_jobboards()
-    return render_template("fibois_stats_total_ajax.html", stat=stat, dates=dates, jobboards=jobboards, json=json)
+    return render_template("vitrina_stats_total_ajax.html", stat=stat, dates=dates, json=json)
 
+@app.route("/vitrina/ajax/count_for_date/<datestr>/<entity>")
+def count_for_date(datestr, entity):
+    count = get_count_for_date(datestr, entity.strip())
+    return str(count)
+
+'''
 @app.route("/fibois/ajax/count_for_jobboard/<jobboard>")
 def count_for_jobboard(jobboard):
     count = get_count_for_jobboard(jobboard)
@@ -735,11 +741,6 @@ def pending_count_for_jobboard(jobboard):
 @app.route("/fibois/ajax/count_for_date/<datestr>")
 def count_for_date(datestr):
     count = get_count_for_date(datestr)
-    return str(count)
-
-@app.route("/fibois/ajax/count_for_date_per_status/<datestr>/<status>")
-def count_for_date_per_status(datestr, status):
-    count = get_count_for_date_per_status(datestr, status)
     return str(count)
 
 @app.route("/fibois/ajax/parsed_count_for_date/<datestr>")
@@ -792,6 +793,6 @@ def expired_total():
     count = get_expired_total()
     return str(count)
 
-
+'''
 
 

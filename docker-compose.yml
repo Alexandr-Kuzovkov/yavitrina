@@ -19,19 +19,12 @@ services:
     depends_on:
       - splash
     volumes:
-      - ./monitor:/scrapy/monitor
-      - ./jobscrapers:/scrapy/jobscrapers
-      - ./jobimporters:/scrapy/jobimporters
-      - ./feedgenerator:/scrapy/feedgenerator
-      - ./gcd_apec_feedgenerator:/scrapy/gcd_apec_feedgenerator
-      - ./fibois:/scrapy/fibois
       - ./yavitrina:/scrapy/yavitrina
       - ./home/scrapyd.conf:/etc/scrapyd/scrapyd.conf
       - ./home/scrapyd.conf:/home/root/.scrapyd.conf
       - /home/ubuntu:/home/root
       #- /home/user1:/home/root
       #- /mnt/boardfeeds:/mnt/boardfeeds
-      - ./jobscrapers/utils/autorun.py:/home/root/autorun.py
     dns: 8.8.8.8
     #restart: always
     networks:

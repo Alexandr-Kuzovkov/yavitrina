@@ -1,5 +1,0 @@
-#!/bin/sh
-
-export DOCKER_BRIDGE_IP=$(ip ro | grep default | cut -d' ' -f 3)
-/app/scripts/run.py $1 $2 $3 $4
-

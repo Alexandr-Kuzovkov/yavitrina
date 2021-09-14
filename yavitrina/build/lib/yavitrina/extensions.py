@@ -1,34 +1,20 @@
 import psycopg2
-from psycopg2.pool import ThreadedConnectionPool
 import json
 
-class PgSQLStoreBase(object):
+class PgSQLBase(object):
     settings = None
     conn = None
     cur = None
     schema = 'public'
-
-    dbname = 'dbname'
-    dbhost = 'dbport'
-    dbport = 0000
-    dbuser = 'dbuser'
-    dbpass = 'dbpass'
-    pool = None
+    employers_table = 'employers'
 
 
-    def __init__(self, db):
-        self.dbname = db.get('dbname')
-        self.dbhost = db.get('dbhost')
-        self.dbport = db.get('dbport')
-        self.dbuser = db.get('dbuser')
-        self.dbpass = db.get('dbpass')
-
-        self.pool = ThreadedConnectionPool(3, 20,
-                                      user = self.dbuser,
-                                      password = self.dbpass,
-                                      host = self.dbhost,
-                                      port = self.dbport,
-                                      database = self.dbname)
+    def __init__(self, conf):
+        self.dbname = conf.get('dbname')
+        self.dbhost = conf.get('dbhost')
+        self.dbport = conf.get('dbport')
+        self.dbuser = conf.get('dbuser')
+        self.dbpass = conf.get('dbpass')
 
     def dbopen(self):
         if self.conn is None:
@@ -76,9 +62,10 @@ class PgSQLStoreBase(object):
         self.dbclose()
         return res
 
-    def _getraw(self, sql, field_list, data=None, close=True):
+    def _getraw(self, sql, field_list, data=None):
         self.dbopen()
         if data is None:
+            #print sql
             self.cur.execute(sql)
         elif type(data) is tuple or type(data) is list:
             self.cur.execute(sql, data)
@@ -93,23 +80,10 @@ class PgSQLStoreBase(object):
             for i in range(len(row)):
                 d[field_list[i]] = row[i]
             res.append(d)
-        if close:
-            self.dbclose()
-        return res
-
-    def execute(self, sql, data=None):
-        self.dbopen()
-        if data is None:
-            res = self.cur.execute(sql)
-        elif type(data) is tuple or type(data) is list:
-            res = self.cur.execute(sql, data)
-        else:
-            raise Exception(self.__class__ + ':data must be tuple or list!')
-        self.conn.commit()
         self.dbclose()
         return res
 
-    def run(self, sql, data=None):
+    def _exec(self, sql, data=None):
         self.dbopen()
         if data is None:
             res = self.cur.execute(sql)
@@ -118,30 +92,30 @@ class PgSQLStoreBase(object):
         else:
             raise Exception(self.__class__ + ':data must be tuple or list!')
         self.conn.commit()
-        output = self.cur.fetchall()
-        #self.dbclose()
-        return output
+        return res
 
-    def _getone(self, sql, data=None):
+    def _count_rows(self, table):
+        sql = ' '.join(['SELECT count(*) AS count FROM', table])
+        res = self._getraw(sql, ['count'])
+        return int(res[0]['count'])
+
+    def _clear_table(self, table):
+        sql = ' '.join(['DELETE FROM', table])
         self.dbopen()
-        if data is None:
-            res = self.cur.execute(sql)
-        elif type(data) is tuple or type(data) is list:
-            res = self.cur.execute(sql, data)
+        try:
+            self.cur.execute(sql)
+        except psycopg2.Error, ex:
+            self.conn.rollback()
+            self.dbclose()
+            raise ex
         else:
-            raise Exception(self.__class__ + ':data must be tuple or list!')
-        self.conn.commit()
-        output = self.cur.fetchone()
-        #self.dbclose()
-        return output
+            self.conn.commit()
+            self.dbclose()
 
-    def _serialise_dict(self, val):
-        if type(val) is dict:
-            return json.dumps(val)
-        if type(val) is list:
-            return '{%s}' % json.dumps(val)[1:-1]
-        else:
-            return val
+    def _get_tables_list(self):
+        sql = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type='BASE TABLE'"
+        res = self._getraw(sql, ['table_name'])
+        return map(lambda i: i['table_name'], res)
 
     def _insert(self, table, data):
         if type(data) is not list:
@@ -163,44 +137,70 @@ class PgSQLStoreBase(object):
         self.conn.commit()
         return {'result': True}
 
-class PgSQLStore(PgSQLStoreBase):
-
-    def get_stat(self, entity):
-        res = self._getone("SELECT count(*) AS count FROM " + entity)
-        if res and len(res):
-            return int(res[0])
+    def _serialise_dict(self, val):
+        if type(val) is dict:
+            return json.dumps(val)
         else:
-            return 0
+            return val
 
-    def get_count_for_date(self, datestr, entity):
-        self.dbopen()
-        self.cur.execute("SELECT count(*) AS count FROM {entity} WHERE date(created_at)=%s".format(entity=entity),(datestr,))
-        res = self.cur.fetchone()
-        if res and len(res):
-            return int(res[0])
-        else:
-            return 0
 
-    def get_count_for_date2(self, datestr, entity):
-        query = "SELECT count(*) AS count FROM {entity} WHERE date(created_at)='{date}'".format(entity=entity, date=datestr)
-        try:
-            result = 0
-            connection = self.pool.getconn()
-            connection.autocommit = True
-            with connection.cursor() as cursor:
-                try:
-                    cursor.execute(query)
-                    if cursor.rownumber > 0:
-                        res = cursor.fetchone()
-                        pprint(res)
-                        if res and len(res):
-                            result = int(res[0])
-                except (Exception, psycopg2.DatabaseError) as e:
-                    raise
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(e)
+class PgSQLStore(PgSQLBase):
+
+    def clear_db(self):
+        tables = self._get_tables_list()
+        for table in tables:
+            if table in ['alembic_version']:
+                continue
+            self._clear_table(table)
+
+    def save_category(self, data):
+        if 'parent_url' in data:
+            res = self._get('category', field_list=['id'], where='url=%s', data=[data['parent_url']])
+            if len(res) > 0:
+                data['parent_id'] = res[0]['id']
+        self._insert('category', [data])
+
+    def save_tag(self, data):
+        res = self._get('tag', field_list=None, where='title=%s', data=[data['title']])
+        if len(res) > 0:
+            tag = res[0]
+            if tag['page'] is not None:
+                pages = tag['page'].split(',')
+                pages.append(data['page'])
+                data['page'] = ','.join(pages)
+                sql = "UPDATE tag SET page=%s WHERE id=%s"
+                self.dbopen()
+                self.cur.execute(sql, [data['page'], tag['id']])
+                self.conn.commit()
         else:
-            print(result)
-        finally:
-            self.pool.putconn(connection)
-            return result
+            self._insert('tag', [data])
+
+    def save_product_card(self, data):
+        res = self._get('product_card', field_list=None, where='product_id=%s', data=[data['product_id']])
+        if len(res) > 0:
+            product_card = res[0]
+            if product_card['page'] is not None:
+                pages = product_card['page'].split(',')
+                pages.append(data['page'])
+                data['page'] = ','.join(pages)
+                sql = "UPDATE product_card SET page=%s WHERE id=%s"
+                self.dbopen()
+                self.cur.execute(sql, [data['page'], product_card['id']])
+                self.conn.commit()
+        else:
+            self._insert('product_card', [data])
+
+    def save_product(self, data):
+        res = self._get('category', field_list=['id'], where='url=%s', data=[data['category']])
+        if len(res) > 0:
+            data['category_id'] = res[0]['id']
+        self._insert('product', [data])
+
+    def save_image(self, data):
+        self._insert('image', [data])
+
+
+
+
+
+

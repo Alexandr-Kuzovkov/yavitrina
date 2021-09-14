@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content_header %}
+<h1>Vitrina Stats</h1>
+{% endblock %}
+{% block content_body %}
+<div class="box">
+    <div class="box-header">
+        <h3 class="box-title">Total</h3>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body">
+        <p>Categories: {{ stat.category }}</p>
+        <p>Tags: {{ stat.tag }}</p>
+        <p>Images: {{ stat.image }}</p>
+        <p>Product cards: {{ stat.product_card }}</p>
+        <p>Products: {{ stat.product }}</p>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-header">
+        <h3 class="box-title">Fetched by date</h3>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body table-responsive">
+        <table class="table table-striped">
+            <tr>
+                <th style="width: 30px">Date</th>
+                <th style="width: 160px">Categories</th>
+                <th style="width: 160px">Tags</th>
+                <th style="width: 160px">Images</th>
+                <th style="width: 160px">Product cards</th>
+                <th style="width: 160px">Products</th>
+            </tr>
+            {% for datestr in dates %}
+            <tr>
+                <td>{{ datestr }}</td>
+                <td id="{{ datestr }}-category"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ datestr }}-tag"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ datestr }}-image"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ datestr }}-product_card"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ datestr }}-product"><img src="/static/img/preload-small.gif"/></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<script>
+    (function () {
+        function onLoad(){
+            var dates = {{ json.dumps(dates) | safe}}
+            for (var i=0; i < dates.length; i++){
+               getCountForDate(dates[i], 'category')
+               getCountForDate(dates[i], 'tag')
+               getCountForDate(dates[i], 'image')
+               getCountForDate(dates[i], 'product_card')
+               getCountForDate(dates[i], 'product')
+
+            }
+        }
+
+
+        function getCountForDate(datestr, entity) {
+            var el = document.getElementById(`${datestr}-${entity}`);
+            jQuery.get(`/vitrina/ajax/count_for_date/${datestr}/${entity}`, function (data) {
+                //console.log(data, typeof data);
+                if (typeof data == 'object'){
+                    el.innerHTML = data.msg;
+                }else{
+                    el.innerHTML = data;
+                }
+            }).fail(function() {
+                el.innerHTML = 'error';
+              })
+        }
+
+        window.addEventListener('load', onLoad);
+    })();
+
+</script>
+{% endblock %}
