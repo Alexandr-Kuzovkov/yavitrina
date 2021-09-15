@@ -101,6 +101,41 @@ alembic revision -m "add category column"
 chmod -R a+w alembic/versions/
 ```
 
+Migration file looks like this:
+
+```python
+
+# revision identifiers, used by Alembic.
+revision = '1975ea83b712'
+down_revision = None
+branch_labels = None
+
+from alembic import op
+import sqlalchemy as sa
+
+def upgrade():
+    pass
+
+def downgrade():
+    pass
+```
+
+You should update it with wj=hat you need:
+
+```python
+
+def upgrade():
+    op.create_table(
+        'account',
+        sa.Column('id', sa.Integer, primary_key=True),
+        sa.Column('name', sa.String(50), nullable=False),
+        sa.Column('description', sa.Unicode(200)),
+    )
+
+def downgrade():
+    op.drop_table('account')
+```
+
 Run migration:
 ```bash
 alembic upgrade head
