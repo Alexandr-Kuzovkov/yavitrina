@@ -1,6 +1,7 @@
 import psycopg2
 from psycopg2.pool import ThreadedConnectionPool
 import json
+from pprint import pprint
 
 class PgSQLStoreBase(object):
     settings = None
@@ -173,15 +174,6 @@ class PgSQLStore(PgSQLStoreBase):
             return 0
 
     def get_count_for_date(self, datestr, entity):
-        self.dbopen()
-        self.cur.execute("SELECT count(*) AS count FROM {entity} WHERE date(created_at)=%s".format(entity=entity),(datestr,))
-        res = self.cur.fetchone()
-        if res and len(res):
-            return int(res[0])
-        else:
-            return 0
-
-    def get_count_for_date2(self, datestr, entity):
         query = "SELECT count(*) AS count FROM {entity} WHERE date(created_at)='{date}'".format(entity=entity, date=datestr)
         try:
             result = 0
@@ -190,17 +182,16 @@ class PgSQLStore(PgSQLStoreBase):
             with connection.cursor() as cursor:
                 try:
                     cursor.execute(query)
-                    if cursor.rownumber > 0:
-                        res = cursor.fetchone()
-                        pprint(res)
-                        if res and len(res):
-                            result = int(res[0])
+                    #if cursor.rownumber > 0:
+                    res = cursor.fetchone()
+                    if res and len(res):
+                        result = int(res[0])
                 except (Exception, psycopg2.DatabaseError) as e:
                     raise
         except (Exception, psycopg2.DatabaseError) as error:
             print(e)
         else:
-            print(result)
+            pass
         finally:
             self.pool.putconn(connection)
             return result

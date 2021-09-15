@@ -33,5 +33,5 @@ def get_stat():
     return stat
 
 def get_count_for_date(datestr, entity):
-    return db.get_count_for_date2(datestr, entity)
+    return db.get_count_for_date(datestr, entity)
 

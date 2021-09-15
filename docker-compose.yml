@@ -41,6 +41,7 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - scrapy
+      - db
     tty: true
     networks:
       - back
