@@ -53,7 +53,7 @@ sudo docker-compose up -d
 sudo docker-compose ps # check that all services are running
 ```
 Go to dashboard, [http://localhost:9000](http://localhost:9000)
-Create project with name, example `vitrina`
+Create project with name, example `yavitrina`
 
 #### V. Deploy
 ```bash
