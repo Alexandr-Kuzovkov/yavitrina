@@ -120,7 +120,7 @@ def downgrade():
     pass
 ```
 
-You should update it with wj=hat you need:
+You should update it with what you need:
 
 ```python
 
