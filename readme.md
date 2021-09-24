@@ -14,7 +14,14 @@ Read more: http://scrapyd.readthedocs.io/en/stable/`
 
 ##Manual
  
-#### I. Install docker: 
+#### I. Get project and install docker: 
+create `ubuntu` user and login from it
+Clone repository and build image:
+```bash
+git clone https://github.com/kuzovkov/yavitrina.git scrapy-yavitrina
+cd scrapy-yavitrina
+```
+
 Install docker: [inslall docker documentation](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
 
 OR just run script after clone project
@@ -23,12 +30,8 @@ OR just run script after clone project
 ```
 
 #### II. Build project
-create `ubuntu` user and login from it
-Clone repository and build image:
 
 ```bash
-git clone https://github.com/kuzovkov/yavitrina.git scrapy-yavitrina
-cd scrapy-yavitrina
 sudo docker-compose build
 ```
 
