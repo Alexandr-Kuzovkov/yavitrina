@@ -43,7 +43,8 @@ CONCURRENT_REQUESTS_PER_DOMAIN = 16
 #COOKIES_ENABLED = False
 
 #SPLASH_URL = 'http://localhost:8050/'
-SPLASH_URL = 'http://hub.kuzovkov12.ru:8050/'
+#SPLASH_URL = 'http://hub.kuzovkov12.ru:8050/'
+SPLASH_URL = 'http://172.105.247.179:9050/'
 #SPLASH_URL = 'http://splash:8050/'
 HTTPERROR_ALLOWED_CODES =[400,404]
 
