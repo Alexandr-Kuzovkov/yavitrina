@@ -185,7 +185,10 @@ class VitrinaSpider(scrapy.Spider):
             yield request
             if img.startswith('//'):
                 img = 'https:{img}'.format(img=img)
-            request_img = scrapy.Request(img, self.download_image)
+            try:
+                request_img = scrapy.Request(img, self.download_image)
+            except Exception as ex:
+                self.logger.warning('Error load image from {url}'.format(url=img))
             request_img.meta['filename'] = '-'.join(img.split('/')[-3:])
             request_img.meta['product_id'] = id
             request_img.meta['autotype'] = True
@@ -237,7 +240,10 @@ class VitrinaSpider(scrapy.Spider):
             yield request
             if img.startswith('//'):
                 img = 'https:{img}'.format(img=img)
-            request_img = scrapy.Request(img, self.download_image)
+            try:
+                request_img = scrapy.Request(img, self.download_image)
+            except Exception as ex:
+                self.logger.warning('Error load image from {url}'.format(url=img))
             request_img.meta['filename'] = '-'.join(img.split('/')[-3:])
             request_img.meta['product_id'] = id
             request_img.meta['autotype'] = True
