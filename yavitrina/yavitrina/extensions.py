@@ -167,6 +167,7 @@ class PgSQLStore(PgSQLBase):
             if tag['page'] is not None:
                 pages = tag['page'].split(',')
                 pages.append(data['page'])
+                pages = list(set(pages))
                 data['page'] = ','.join(pages)
                 sql = "UPDATE tag SET page=%s WHERE id=%s"
                 self.dbopen()
@@ -182,6 +183,7 @@ class PgSQLStore(PgSQLBase):
             if product_card['page'] is not None:
                 pages = product_card['page'].split(',')
                 pages.append(data['page'])
+                pages = list(set(pages))
                 data['page'] = ','.join(pages)
                 sql = "UPDATE product_card SET page=%s WHERE id=%s"
                 self.dbopen()
@@ -192,9 +194,20 @@ class PgSQLStore(PgSQLBase):
 
     def save_product(self, data):
         res = self._get('category', field_list=['id'], where='url=%s', data=[data['category']])
+        category_id = None
         if len(res) > 0:
-            data['category_id'] = res[0]['id']
-        self._insert('product', [data])
+            category_id = res[0]['id']
+            data['category_id'] = category_id
+        products = self._get('product', field_list=None, where='product_id=%s', data=[data['product_id']])
+        if len(products) > 0 and category_id is not None:
+            product = products[0]
+            self._insert('product_category', [{'category_id': category_id, 'product_id': product['id']}])
+        else:
+            self._insert('product', [data])
+            products = self._get('product', field_list=None, where='product_id=%s', data=[data['product_id']])
+            if len(products) > 0 and category_id is not None:
+                product = products[0]
+                self._insert('product_category', [{'category_id': category_id, 'product_id': product['id']}])
 
     def save_image(self, data):
         self._insert('image', [data])

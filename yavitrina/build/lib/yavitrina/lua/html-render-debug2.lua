@@ -13,12 +13,10 @@ function main(splash, args)
     print(height)
   	ok, reason = splash:go(url)
     splash:wait(10.0)
-    chart = splash:select('div[class="related-products"]')
     return {
         html = splash:html(),
         png = splash:png(),
         har = splash:har(),
-        chart = chart:png()
       }
 
 end
