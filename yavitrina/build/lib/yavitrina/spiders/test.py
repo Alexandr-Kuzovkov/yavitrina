@@ -143,8 +143,9 @@ class TestSpider(scrapy.Spider):
         self.logger.info('parse_sub_category3: url: {url}; {count} products fetched'.format(url=response.url, count=len(card_blocks)))
         if len(card_blocks) == 0:
             message = ''.join(response.css('div[class="cat-text-null"] b').xpath('text()').extract())
-            pprint(response.text)
-            self.logger.info('message: "{message}"; http_code: {code}'.format(message=unicode(message), code=response.status))
+            if len(response.text) < 200:
+                self.logger.info('Response text: {text}'.format(text=response.text))
+            self.logger.info('message: "{message}"; http_code: {code}'.format(message=message.encode('utf-8'), code=response.status))
         for html in card_blocks:
             body = html.encode('utf-8')
             block = response.replace(body=body)

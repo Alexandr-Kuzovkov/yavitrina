@@ -84,6 +84,8 @@ scrapy crawl vitrina # run scraper in console
 ------------------------------
 [alembic](https://alembic.sqlalchemy.org/en/latest/tutorial.html)
 
+[alembic.op](https://alembic.sqlalchemy.org/en/latest/ops.html)
+
 
 Install:
 ```bash

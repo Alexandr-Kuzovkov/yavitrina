@@ -154,11 +154,16 @@ class PgSQLStore(PgSQLBase):
             self._clear_table(table)
 
     def save_category(self, data):
-        if 'parent_url' in data:
-            res = self._get('category', field_list=['id'], where='url=%s', data=[data['parent_url']])
-            if len(res) > 0:
-                data['parent_id'] = res[0]['id']
-        self._insert('category', [data])
+        categories = self._get('category', field_list=None, where='url=%s', data=[data['url']])
+        if len(categories) > 0:
+            if 'parent_url' in data:
+                res = self._get('category', field_list=['id'], where='url=%s', data=[data['parent_url']])
+                if len(res) > 0:
+                    data['parent_id'] = res[0]['id']
+            res = self._insert('category', [data])
+            return res
+        else:
+            return None
 
     def save_tag(self, data):
         res = self._get('tag', field_list=None, where='title=%s', data=[data['title']])
@@ -173,8 +178,10 @@ class PgSQLStore(PgSQLBase):
                 self.dbopen()
                 self.cur.execute(sql, [data['page'], tag['id']])
                 self.conn.commit()
+            return None
         else:
-            self._insert('tag', [data])
+            res = self._insert('tag', [data])
+            return res
 
     def save_product_card(self, data):
         res = self._get('product_card', field_list=None, where='product_id=%s', data=[data['product_id']])
@@ -189,8 +196,10 @@ class PgSQLStore(PgSQLBase):
                 self.dbopen()
                 self.cur.execute(sql, [data['page'], product_card['id']])
                 self.conn.commit()
+            return None
         else:
-            self._insert('product_card', [data])
+            res = self._insert('product_card', [data])
+            return res
 
     def save_product(self, data):
         res = self._get('category', field_list=['id'], where='url=%s', data=[data['category']])
@@ -199,20 +208,25 @@ class PgSQLStore(PgSQLBase):
             category_id = res[0]['id']
             data['category_id'] = category_id
         products = self._get('product', field_list=None, where='product_id=%s', data=[data['product_id']])
-        if len(products) > 0 and category_id is not None:
-            product = products[0]
-            self._insert('product_category', [{'category_id': category_id, 'product_id': product['id']}])
+        if len(products) > 0:
+            if category_id is not None:
+                product = products[0]
+                self._insert('product_category', [{'category_id': category_id, 'product_id': product['id']}])
+                return None
         else:
             self._insert('product', [data])
             products = self._get('product', field_list=None, where='product_id=%s', data=[data['product_id']])
             if len(products) > 0 and category_id is not None:
                 product = products[0]
-                self._insert('product_category', [{'category_id': category_id, 'product_id': product['id']}])
+                res = self._insert('product_category', [{'category_id': category_id, 'product_id': product['id']}])
+                return res
 
     def save_image(self, data):
-        self._insert('image', [data])
-
-
+        res = self._get('image', field_list=['id'], where='url=%s', data=[data['url']])
+        if len(res) == 0:
+            res = self._insert('image', [data])
+            return res
+        return None
 
 
 
