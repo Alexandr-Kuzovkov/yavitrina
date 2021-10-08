@@ -18,6 +18,7 @@ from yavitrina.items import TagItem
 from yavitrina.items import ProductCardItem
 from yavitrina.items import ProductItem
 from yavitrina.items import ImageItem
+from yavitrina.scrapestack import ScrapestackRequest
 
 
 class VitrinaSpider(scrapy.Spider):
@@ -158,7 +159,11 @@ class VitrinaSpider(scrapy.Spider):
             yield request
         #save product cards
         card_blocks = response.css('div[class="products-list"] div.p-card').extract()
-        self.logger.info('page: {page}; {count} products fetched'.format(page=self.get_uri(response.url), count=len(card_blocks)))
+        self.logger.info('parse_sub_category2: url: {url}; {count} products fetched'.format(url=response.url, count=len(card_blocks)))
+        if len(card_blocks) == 0:
+            message = ''.join(response.css('div[class="cat-text-null"] b').xpath('text()').extract())
+            pprint(response.text)
+            self.logger.info('message: "{message}"; http_code: {code}'.format(message=unicode(message), code=response.status))
         for html in card_blocks:
             body = html.encode('utf-8')
             block = response.replace(body=body)
@@ -183,9 +188,12 @@ class VitrinaSpider(scrapy.Spider):
             request.meta['category'] = self.get_uri(response.url)
             request.meta['ymarket_link'] = ymarket_link
             yield request
-            if img.startswith('//'):
+            if img.startswith('//') or (not img.startswith('https:')):
                 img = 'https:{img}'.format(img=img)
-            request_img = scrapy.Request(img, self.download_image)
+            try:
+                request_img = scrapy.Request(img, self.download_image)
+            except Exception as ex:
+                self.logger.warning('Error load image from {url}'.format(url=img))
             request_img.meta['filename'] = '-'.join(img.split('/')[-3:])
             request_img.meta['product_id'] = id
             request_img.meta['autotype'] = True
@@ -210,7 +218,11 @@ class VitrinaSpider(scrapy.Spider):
             yield l.load_item()
         # save product cards
         card_blocks = response.css('div[class="products-list"] div.p-card').extract()
-        self.logger.info('page: {page}; {count} products fetched'.format(page=self.get_uri(response.url), count=len(card_blocks)))
+        self.logger.info('parse_sub_category3: url: {url}; {count} products fetched'.format(url=response.url, count=len(card_blocks)))
+        if len(card_blocks) == 0:
+            message = ''.join(response.css('div[class="cat-text-null"] b').xpath('text()').extract())
+            pprint(response.text)
+            self.logger.info('message: "{message}"; http_code: {code}'.format(message=unicode(message), code=response.status))
         for html in card_blocks:
             body = html.encode('utf-8')
             block = response.replace(body=body)
@@ -235,9 +247,12 @@ class VitrinaSpider(scrapy.Spider):
             request.meta['category'] = self.get_uri(response.url)
             request.meta['ymarket_link'] = ymarket_link
             yield request
-            if img.startswith('//'):
+            if img.startswith('//') or (not img.startswith('https:')):
                 img = 'https:{img}'.format(img=img)
-            request_img = scrapy.Request(img, self.download_image)
+            try:
+                request_img = scrapy.Request(img, self.download_image)
+            except Exception as ex:
+                self.logger.warning('Error load image from {url}'.format(url=img))
             request_img.meta['filename'] = '-'.join(img.split('/')[-3:])
             request_img.meta['product_id'] = id
             request_img.meta['autotype'] = True
@@ -280,6 +295,8 @@ class VitrinaSpider(scrapy.Spider):
         #save images
         image_urls = response.css('div[class="photos"] img').xpath('@src').extract()
         for link in image_urls:
+            if link.startswith('//') or (not link.startswith('https:')):
+                link = 'https:{img}'.format(img=link)
             request = scrapy.Request(link, self.download_image)
             request.meta['product_id'] = product_id
             request.meta['filename'] = '-'.join(link.split('/')[-3:])
@@ -306,6 +323,7 @@ class VitrinaSpider(scrapy.Spider):
         return url.replace(self.base_url, '').split('?')[0]
 
     def handle_pagination(self, response, callback, default_count=72):
+        self.logger.info('handle pagination from url: {url}'.format(url=response.url))
         try:
             count = int(''.join(
                 response.css('div[class="p-title__wrap"] h1[class="p-title"] + span[class="p-title__text"]').xpath(
@@ -314,7 +332,9 @@ class VitrinaSpider(scrapy.Spider):
             self.logger.warning('Error while get count products')
             self.logger.warning(ex)
             count = default_count
+        self.logger.info('handle pagination: count={count}'.format(count=count))
         count_pages = math.ceil(count / 72.0)
+        self.logger.info('handle pagination: count_pages={count_pages}'.format(count=count))
         category_uri = self.get_uri(response.url)
         if count_pages > 1:
             if category_uri not in self.pagination:

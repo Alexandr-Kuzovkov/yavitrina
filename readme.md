@@ -14,21 +14,24 @@ Read more: http://scrapyd.readthedocs.io/en/stable/`
 
 ##Manual
  
-#### I. Install docker: 
+#### I. Get project and install docker: 
+create `ubuntu` user and login from it
+Clone repository and build image:
+```bash
+git clone https://github.com/kuzovkov/yavitrina.git scrapy-yavitrina
+cd scrapy-yavitrina
+```
+
 Install docker: [inslall docker documentation](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
 
-OR just run script
+OR just run script after clone project
 ```bash
 ./install-docker.sh
 ```
 
 #### II. Build project
-create `ubuntu` user and login from it
-Clone repository and build image:
 
 ```bash
-git clone https://github.com/kuzovkov/yavitrina.git scrapy-yavitrina
-cd scrapy-yavitrina
 sudo docker-compose build
 ```
 
@@ -56,6 +59,7 @@ Go to dashboard, [http://localhost:9000](http://localhost:9000)
 Create project with name, example `yavitrina`
 
 #### V. Deploy
+On your local developer machine: 
 ```bash
 sudo docker-compose exec scrapy bash
 cd /scrapy/yavitrina/
@@ -66,7 +70,7 @@ File `output.egg` you should use in Deploy form in dashboard.
 
 #### VI. Run spider
 
-In dashboard press button `Run`, choose spider and press button `Create`
+In dashboard press button `Run`, choose spider `vitrina` and press button `Create`
 You can see logs of spider in dashboard.
 
 #### VII. Develop and debug
