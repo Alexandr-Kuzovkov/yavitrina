@@ -63,6 +63,7 @@ class YavitrinaPipeline(object):
     files = {}
     feed_name = ''
     config = None
+    spider = None
 
     def __init__(self):
         self.files = {}
@@ -84,7 +85,10 @@ class YavitrinaPipeline(object):
 
     def spider_opened(self, spider):
         #self.exporter = YavitrinaFileExporter(spider)
+        self.spider = spider
         self.exporter = YavitrinaPgSqlExporter(spider, self.config)
+        SCRAPESTACK_ACCESS_KEY = self.config['SCRAPESTACK']['ACCESS_KEY']
+        self.spider.scrapestack_access_key = SCRAPESTACK_ACCESS_KEY
         self.exporter.start_exporting()
 
 

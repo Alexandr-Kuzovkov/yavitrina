@@ -32,13 +32,14 @@ class VitrinaSpider(scrapy.Spider):
     logger = logging.getLogger()
     drain = False
     pagination = {}
-    use_splash = True
     es_exporter = None
     base_url = 'https://yavitrina.ru'
     lua_src = pkgutil.get_data('yavitrina', 'lua/html-render.lua')
     lua_src2 = pkgutil.get_data('yavitrina', 'lua/html-render-scrolldown.lua')
     clear_db = False
     paginations = {}
+    scrapestack_access_key = ''
+
 
     def __init__(self, drain=False, noproxy=False, cleardb=False, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
@@ -49,8 +50,10 @@ class VitrinaSpider(scrapy.Spider):
         if cleardb:
             self.clear_db = True
 
-    def getRequest(self, url, callback, dont_filter=False):
-        if self.use_splash:
+    def getRequest(self, url, callback, request_type='splash', dont_filter=False):
+        if request_type == 'scrapestack':
+            request = ScrapestackRequest(url, callback=callback, access_key=self.scrapestack_access_key, dont_filter=dont_filter, options={'render_js': 1})
+        elif request_type == 'splash':
             args = {'wait': 10.0, 'lua_source': self.lua_src, 'timeout': 3600}
             request = SplashRequest(url, callback=callback, endpoint='execute', args=args, meta={"handle_httpstatus_all": True}, dont_filter=dont_filter)
         else:
@@ -184,7 +187,7 @@ class VitrinaSpider(scrapy.Spider):
             ymarket_link = ''.join(block.css('div[class="price-in-shops"] span').xpath('@data-link').extract())
             yield l.load_item()
             link = ''.join([self.base_url, url])
-            request = self.getRequest(link, self.parse_product_page, True)
+            request = self.getRequest(link, self.parse_product_page, dont_filter=True)
             request.meta['parent'] = url
             request.meta['category'] = self.get_uri(response.url)
             request.meta['ymarket_link'] = ymarket_link
@@ -264,7 +267,7 @@ class VitrinaSpider(scrapy.Spider):
             ymarket_link = ''.join(block.css('div[class="price-in-shops"] span').xpath('@data-link').extract())
             yield l.load_item()
             link = ''.join([self.base_url, url])
-            request = self.getRequest(link, self.parse_product_page, True)
+            request = self.getRequest(link, self.parse_product_page, dont_filter=True)
             request.meta['parent'] = url
             request.meta['category'] = self.get_uri(response.url)
             request.meta['ymarket_link'] = ymarket_link

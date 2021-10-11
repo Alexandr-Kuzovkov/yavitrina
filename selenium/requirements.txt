@@ -1,0 +1,8 @@
+requests
+Flask>=0.9
+urllib3
+uWSGI==2.0.17.1
+
+
+
+

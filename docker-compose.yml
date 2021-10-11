@@ -91,6 +91,23 @@ services:
       - back
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
 
+  selenium:
+    privileged: true
+    build:
+      context: ./selenium
+      dockerfile: Dockerfile
+    volumes:
+      - ./selenium/app:/usr/src/app
+      - ./selenium/data:/data
+      - /dev/shm:/dev/shm
+      - nginx_log:/nginx_log
+    dns: 8.8.8.8
+    ports:
+      - "8257:8000"
+    networks:
+      - back
+    user: apps
+
 networks:
   back:
     driver: bridge
@@ -98,3 +115,4 @@ networks:
 volumes:
   logs: {}
   db-data: {}
+  nginx_log: {}
