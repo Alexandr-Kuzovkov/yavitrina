@@ -22,6 +22,19 @@ class TagItem(scrapy.Item):
     page = scrapy.Field()
     html = scrapy.Field()
 
+class SearchTagItem(scrapy.Item):
+    url = scrapy.Field()
+    title = scrapy.Field()
+    page = scrapy.Field()
+    html = scrapy.Field()
+
+
+class CategoryTagItem(scrapy.Item):
+    url = scrapy.Field()
+    title = scrapy.Field()
+    page = scrapy.Field()
+    html = scrapy.Field()
+
 
 class ProductCardItem(scrapy.Item):
     url = scrapy.Field()

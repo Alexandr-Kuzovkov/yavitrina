@@ -50,7 +50,7 @@ class TestSpider(scrapy.Spider):
 
     def getRequest(self, url, callback, request_type='splash', dont_filter=False):
         if request_type == 'selenium':
-            request = SelenuimRequest(url, callback=callback, dont_filter=dont_filter)
+            request = SelenuimRequest(url, callback=callback, dont_filter=dont_filter, options={'minsize': 2048, 'wait': 2})
         elif request_type == 'scrapestack':
             request = ScrapestackRequest(url, callback=callback, access_key=self.scrapestack_access_key, dont_filter=dont_filter, options={'render_js': 1})
         elif request_type == 'splash':

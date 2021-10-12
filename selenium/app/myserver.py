@@ -107,59 +107,20 @@ def make_screenshot():
                 browser.close()
 
 
-@app.route('/html-orig', methods=['POST'])
-def get_html_orig():
-    MIN_SIZE = 512
-    if request.method == 'POST':
-        url = request.form['url']
-        try:
-            if 'minsize' in request.form:
-                MIN_SIZE = int(request.form['minsize'])
-        except Exception as ex:
-            pass
-        try:
-            if 'token' in request.form:
-                url = '{url}?token={token}'.format(url=url, token=request.form['token'])
-        except Exception as ex:
-            pass
-        options = webdriver.ChromeOptions()
-        options.add_argument('--no-sandbox')
-        options.add_argument('headless')
-        browser = webdriver.Chrome(options=options)
-        attemps = 5
-        filesize = 0
-        filename = '/home/apps/{uuid}.html'.format(uuid=str(uuid.uuid1()))
-        while attemps > 0 and filesize < MIN_SIZE:
-            browser.get(url)
-            browser.implicitly_wait(10.0)
-            time.sleep(10)
-            with open(filename, 'w') as f:
-                f.write(browser.page_source.encode('utf-8'))
-            attemps -= 1
-            if os.path.isfile(filename):
-                filesize = os.stat(filename).st_size
-        if filesize < MIN_SIZE:
-            raise InvalidHtml('Content is invalid', status_code=500)
-        else:
-            try:
-                return send_file(filename, attachment_filename=os.path.basename(filename))
-            except Exception as e:
-                return str(e)
-            finally:
-                os.unlink(filename)
-                browser.close()
-
 @app.route('/html', methods=['GET'])
 def get_html():
     MIN_SIZE = 512
+    IMPLICITLY_WAIT = 3.0
     if request.method == 'GET':
         url = request.args.get('url')
-        print('url: {url}'.format(url=url))
         try:
-            if 'minsize' in request.form:
-                MIN_SIZE = int(request.args.get('minsize'))
+           MIN_SIZE = int(request.args.get('minsize', MIN_SIZE))
+           IMPLICITLY_WAIT = float(request.args.get('wait', IMPLICITLY_WAIT))
         except Exception as ex:
             pass
+        print('url: {url}'.format(url=url))
+        print('MIN_SIZE: {min_size}'.format(min_size=MIN_SIZE))
+        print('IMPLICITLY_WAIT: {implicitly_wait}'.format(implicitly_wait=IMPLICITLY_WAIT))
         options = webdriver.ChromeOptions()
         options.add_argument('--no-sandbox')
         options.add_argument('headless')
@@ -169,8 +130,8 @@ def get_html():
         content = ''
         while attemps > 0 and contentsize < MIN_SIZE:
             browser.get(url)
-            browser.implicitly_wait(3.0)
-            time.sleep(3)
+            browser.implicitly_wait(IMPLICITLY_WAIT)
+            time.sleep(IMPLICITLY_WAIT)
             content = browser.page_source.encode('utf-8')
             attemps -= 1
             contentsize = len(content)
