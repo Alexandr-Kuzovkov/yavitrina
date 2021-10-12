@@ -1,0 +1,7 @@
+{"openapi":"3.0.0","info":{"title":"API documentation","version":"1.0.0"},"paths":{
+  "\/screenshot":{"post":{"tags":["Selenium render"],"summary":"Create screenshot of page from URL","requestBody":{"content":{"multipart\/form-data":{"schema":{"required":["url"],"properties":{"url":{"description":"URL","type":"string"}, "minsize": {"description":"Minimal image size, bytes","type":"integer"},"token": {"description":"Auth token","type":"string"}},"type":"object"}}}},"responses":{"200":{"description":"OK","content":{"application\/octet-stream":{}}}}}},
+  "\/html":{"get":{"tags":["Selenium render"],"summary":"Get HTML content of page from URL", "parameters": [{"name":"url","in":"query","description":"URL","required":true,"schema":{"type":"string"}}, {"name":"minsize","in":"query","description":"Minimal html size, bytes","required":false,"schema":{"type":"integer"}}, {"name":"wait","in":"query","description":"Delay in seconds","required":false,"schema":{"type":"integer"}}],"responses":{"200":{"description":"OK","content":{"text/html":{}}}}}},
+
+},"components":{
+  "securitySchemes":{"ApiKeyAuth":{"type":"apiKey","in":"header","name":"Authorization"}}},
+  "security":[{"ApiKeyAuth":[]}]}
