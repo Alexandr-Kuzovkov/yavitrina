@@ -144,7 +144,7 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('html', block.text)
             yield l.load_item()
         # save search_tag
-        search_tags_blocks = response.css('div[class="search-tags"] div[class="list"] a')
+        search_tags_blocks = response.css('div[class="search-tags"] div[class="list"] a').extract()
         for html in search_tags_blocks:
             body = html.encode('utf-8')
             block = response.replace(body=body)
@@ -161,7 +161,7 @@ class VitrinaSpider(scrapy.Spider):
             request.meta['parent'] = url
             yield request
         # save new category tag
-        category_tags_blocks = response.css('div[class="category-new"] div[class="list"] a')
+        category_tags_blocks = response.css('div[class="category-new"] div[class="list"] a').extract()
         for html in category_tags_blocks:
             body = html.encode('utf-8')
             block = response.replace(body=body)
