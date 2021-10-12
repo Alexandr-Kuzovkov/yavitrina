@@ -18,7 +18,10 @@ from yavitrina.items import TagItem
 from yavitrina.items import ProductCardItem
 from yavitrina.items import ProductItem
 from yavitrina.items import ImageItem
+from yavitrina.items import SearchTagItem
+from yavitrina.items import CategoryTagItem
 from yavitrina.scrapestack import ScrapestackRequest
+from yavitrina.seleniumrequest import SelenuimRequest
 
 
 class VitrinaSpider(scrapy.Spider):
@@ -32,13 +35,14 @@ class VitrinaSpider(scrapy.Spider):
     logger = logging.getLogger()
     drain = False
     pagination = {}
-    use_splash = True
     es_exporter = None
     base_url = 'https://yavitrina.ru'
     lua_src = pkgutil.get_data('yavitrina', 'lua/html-render.lua')
     lua_src2 = pkgutil.get_data('yavitrina', 'lua/html-render-scrolldown.lua')
     clear_db = False
     paginations = {}
+    scrapestack_access_key = ''
+
 
     def __init__(self, drain=False, noproxy=False, cleardb=False, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
@@ -49,8 +53,12 @@ class VitrinaSpider(scrapy.Spider):
         if cleardb:
             self.clear_db = True
 
-    def getRequest(self, url, callback, dont_filter=False):
-        if self.use_splash:
+    def getRequest(self, url, callback, request_type='splash', dont_filter=False):
+        if request_type == 'selenium':
+            request = SelenuimRequest(url, callback=callback, dont_filter=dont_filter, options={'minsize': 2048, 'wait': 2})
+        elif request_type == 'scrapestack':
+            request = ScrapestackRequest(url, callback=callback, access_key=self.scrapestack_access_key, dont_filter=dont_filter, options={'render_js': 1})
+        elif request_type == 'splash':
             args = {'wait': 10.0, 'lua_source': self.lua_src, 'timeout': 3600}
             request = SplashRequest(url, callback=callback, endpoint='execute', args=args, meta={"handle_httpstatus_all": True}, dont_filter=dont_filter)
         else:
@@ -135,6 +143,40 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('page', self.get_uri(response.url))
             l.add_value('html', block.text)
             yield l.load_item()
+        # save search_tag
+        search_tags_blocks = response.css('div[class="search-tags"] div[class="list"] a').extract()
+        for html in search_tags_blocks:
+            body = html.encode('utf-8')
+            block = response.replace(body=body)
+            url = ' '.join(block.css('a').xpath('@href').extract())
+            title = ' '.join(block.css('a').xpath('text()').extract())
+            l = ItemLoader(item=SearchTagItem(), response=response)
+            l.add_value('url', url)
+            l.add_value('title', title)
+            l.add_value('page', self.get_uri(response.url))
+            l.add_value('html', block.text)
+            yield l.load_item()
+            link = ''.join([self.base_url, url])
+            request = self.getRequest(link, self.parse_sub_category3)
+            request.meta['parent'] = url
+            yield request
+        # save new category tag
+        category_tags_blocks = response.css('div[class="category-new"] div[class="list"] a').extract()
+        for html in category_tags_blocks:
+            body = html.encode('utf-8')
+            block = response.replace(body=body)
+            url = ' '.join(block.css('a').xpath('@href').extract())
+            title = ' '.join(block.css('a').xpath('text()').extract())
+            l = ItemLoader(item=CategoryTagItem(), response=response)
+            l.add_value('url', url)
+            l.add_value('title', title)
+            l.add_value('page', self.get_uri(response.url))
+            l.add_value('html', block.text)
+            yield l.load_item()
+            link = ''.join([self.base_url, url])
+            request = self.getRequest(link, self.parse_sub_category3)
+            request.meta['parent'] = url
+            yield request
         #save categories
         cat_blocks = response.css('div[class="aside"]').xpath(u"//span[text() = 'Категории']/parent::div/following-sibling::div/ul/li").extract()
         for html in cat_blocks:
@@ -184,7 +226,7 @@ class VitrinaSpider(scrapy.Spider):
             ymarket_link = ''.join(block.css('div[class="price-in-shops"] span').xpath('@data-link').extract())
             yield l.load_item()
             link = ''.join([self.base_url, url])
-            request = self.getRequest(link, self.parse_product_page, True)
+            request = self.getRequest(link, self.parse_product_page, dont_filter=True, request_type='selenium')
             request.meta['parent'] = url
             request.meta['category'] = self.get_uri(response.url)
             request.meta['ymarket_link'] = ymarket_link
@@ -215,6 +257,40 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('page', self.get_uri(response.url))
             l.add_value('html', block.text)
             yield l.load_item()
+        # save search_tag
+        search_tags_blocks = response.css('div[class="search-tags"] div[class="list"] a')
+        for html in search_tags_blocks:
+            body = html.encode('utf-8')
+            block = response.replace(body=body)
+            url = ' '.join(block.css('a').xpath('@href').extract())
+            title = ' '.join(block.css('a').xpath('text()').extract())
+            l = ItemLoader(item=SearchTagItem(), response=response)
+            l.add_value('url', url)
+            l.add_value('title', title)
+            l.add_value('page', self.get_uri(response.url))
+            l.add_value('html', block.text)
+            yield l.load_item()
+            link = ''.join([self.base_url, url])
+            request = self.getRequest(link, self.parse_sub_category3)
+            request.meta['parent'] = url
+            yield request
+        # save new category tag
+        category_tags_blocks = response.css('div[class="category-new"] div[class="list"] a')
+        for html in category_tags_blocks:
+            body = html.encode('utf-8')
+            block = response.replace(body=body)
+            url = ' '.join(block.css('a').xpath('@href').extract())
+            title = ' '.join(block.css('a').xpath('text()').extract())
+            l = ItemLoader(item=CategoryTagItem(), response=response)
+            l.add_value('url', url)
+            l.add_value('title', title)
+            l.add_value('page', self.get_uri(response.url))
+            l.add_value('html', block.text)
+            yield l.load_item()
+            link = ''.join([self.base_url, url])
+            request = self.getRequest(link, self.parse_sub_category3)
+            request.meta['parent'] = url
+            yield request
         # save categories
         cat_blocks = response.css('div[class="aside"]').xpath(u"//span[text() = 'Категории']/parent::div/following-sibling::div/ul/li").extract()
         for html in cat_blocks:
@@ -264,7 +340,7 @@ class VitrinaSpider(scrapy.Spider):
             ymarket_link = ''.join(block.css('div[class="price-in-shops"] span').xpath('@data-link').extract())
             yield l.load_item()
             link = ''.join([self.base_url, url])
-            request = self.getRequest(link, self.parse_product_page, True)
+            request = self.getRequest(link, self.parse_product_page, dont_filter=True, request_type='selenium')
             request.meta['parent'] = url
             request.meta['category'] = self.get_uri(response.url)
             request.meta['ymarket_link'] = ymarket_link
@@ -291,8 +367,10 @@ class VitrinaSpider(scrapy.Spider):
             price = None
         shop_link = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="btn-box"] a[class="btn btn-in-shops"]').xpath('@href').extract())
         shop_link2 = ' '.join(response.css('div[class="product_tabs"] section[id="content1"] a').xpath('@href').extract())
-        parameters = response.css('div[class="product_tabs"] section[id="content2"] article span').xpath('text()').extract()
-        feedbacks = '##@@@!!!'.join(response.css('div[class="product_tabs"] section[id="content3"] article div[class="_1qMiEXz _17VRAZ_"]').extract())
+        parameters = ' '.join(
+            response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
+        feedbacks = '##@@@!!!'.join(
+            response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
         product_id = response.url.split('/').pop()
         categories = response.css('div[class="b-top"] li[class="breadcrumbs-item"] a').xpath('@href').extract()
         l = ItemLoader(item=ProductItem(), response=response)

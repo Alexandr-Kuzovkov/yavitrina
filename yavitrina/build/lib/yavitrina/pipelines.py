@@ -226,6 +226,13 @@ class YavitrinaPgSqlExporter(object):
     sub_folders = {'images_files': None}
     config = None
     db = None
+    stat = {
+        'category': {'parsed': 0, 'inserted': 0},
+        'tag': {'parsed': 0, 'inserted': 0},
+        'image': {'parsed': 0, 'inserted': 0},
+        'product_card': {'parsed': 0, 'inserted': 0},
+        'product': {'parsed': 0, 'inserted': 0},
+    }
 
     def __init__(self, spider, config, **kwargs):
         super(self.__class__, self).__init__()
@@ -256,25 +263,36 @@ class YavitrinaPgSqlExporter(object):
             self.db.clear_db()
 
     def finish_exporting(self):
-        pass
+        logging.info('Exporting done: stat: {stat}'.format(stat=str(self.stat)))
 
     def export_item(self, item):
+        entity = None
+        res = None
         if isinstance(item, CategoryItem):
             logging.debug('saving category item')
-            self.save_category_item(item)
+            entity = 'category'
+            res = self.save_category_item(item)
         elif isinstance(item, TagItem):
             logging.debug('saving tag item')
-            self.save_tag_item(item)
+            entity = 'tag'
+            res = self.save_tag_item(item)
         elif isinstance(item, ProductCardItem):
             logging.debug('saving product card item')
-            self.save_product_card_item(item)
+            entity = 'product_card'
+            res = self.save_product_card_item(item)
         elif isinstance(item, ProductItem):
             logging.debug('saving product item')
-            self.save_product_item(item)
+            entity = 'product'
+            res = self.save_product_item(item)
         elif isinstance(item, ImageItem):
             logging.debug('saving image item')
             #pprint(item)
-            self.save_image_item(item)
+            entity = 'image'
+            res = self.save_image_item(item)
+        if entity is not None:
+            self.stat[entity]['parsed'] += 1
+        if res is not None:
+            self.stat[entity]['inserted'] += 1
 
 
     def save_category_item(self, item):

@@ -45,12 +45,12 @@ class TestSpider(scrapy.Spider):
         if noproxy:
             self.use_splash = False
 
-    def getRequest(self, url, callback):
+    def getRequest(self, url, callback, dont_filter=False):
         if self.use_splash:
             args = {'wait': 10.0, 'lua_source': self.lua_src, 'timeout': 3600}
-            request = SplashRequest(url, callback=callback, endpoint='execute', args=args, meta={"handle_httpstatus_all": True})
+            request = SplashRequest(url, callback=callback, endpoint='execute', args=args, meta={"handle_httpstatus_all": True}, dont_filter=dont_filter)
         else:
-            request = scrapy.Request(url, callback=callback, dont_filter=True)
+            request = scrapy.Request(url, callback=callback, dont_filter=dont_filter)
         return request
 
     def start_requests(self):
@@ -59,6 +59,7 @@ class TestSpider(scrapy.Spider):
         url = 'https://yavitrina.ru/shampuni'
         #url = 'https://yavitrina.ru/verhnyaya-odezhda-dlya-malyshey'
         request = self.getRequest(url, self.parse_sub_category3)
+        request.meta['parent'] = url
         yield request
 
     def parse_product_page(self, response):
@@ -76,7 +77,8 @@ class TestSpider(scrapy.Spider):
         categories = response.css('div[class="b-top"] li[class="breadcrumbs-item"] a').xpath('@href').extract()
         l = ItemLoader(item=ProductItem(), response=response)
         l.add_value('product_id', product_id)
-        l.add_value('html', response.text)
+        #l.add_value('html', response.text)
+        l.add_value('html', 'product html here')
         l.add_value('url', response.url)
         l.add_value('title', title)
         l.add_value('description', description)
@@ -115,7 +117,7 @@ class TestSpider(scrapy.Spider):
             Item['filename'] = '.'.join([filename, ext])
         else:
             Item['filename'] = response.meta['filename']
-        Item['data'] = response.body
+        Item['data'] = 'image data' #response.body
         Item['url'] = response.url
         yield Item
 
@@ -136,8 +138,27 @@ class TestSpider(scrapy.Spider):
             l.add_value('url', url)
             l.add_value('title', title)
             l.add_value('page', self.get_uri(response.url))
-            l.add_value('html', block.text)
+            #l.add_value('html', block.text)
+            l.add_value('html', 'tag html here')
             yield l.load_item()
+        # save categories
+        # cat_blocks = response.css('div[class="aside"]').xpath(u"//span[text() = 'Категории']/parent::div/following-sibling::div/ul/li").extract()
+        # for html in cat_blocks:
+        #     body = html.encode('utf-8')
+        #     block = response.replace(body=body)
+        #     url = ' '.join(block.css('li a').xpath('@href').extract())
+        #     title = ' '.join(block.css('li a').xpath('text()').extract())
+        #     parent = response.meta['parent']
+        #     l = ItemLoader(item=CategoryItem(), response=response)
+        #     l.add_value('url', url)
+        #     l.add_value('title', title)
+        #     l.add_value('parent', parent)
+        #     l.add_value('html', block.text)
+        #     yield l.load_item()
+        #     link = ''.join([self.base_url, url])
+        #     request = self.getRequest(link, self.parse_sub_category3)
+        #     request.meta['parent'] = url
+        #     yield request
         # save product cards
         card_blocks = response.css('div[class="products-list"] div.p-card').extract()
         self.logger.info('parse_sub_category3: url: {url}; {count} products fetched'.format(url=response.url, count=len(card_blocks)))
@@ -146,6 +167,10 @@ class TestSpider(scrapy.Spider):
             if len(response.text) < 200:
                 self.logger.info('Response text: {text}'.format(text=response.text))
             self.logger.info('message: "{message}"; http_code: {code}'.format(message=message.encode('utf-8'), code=response.status))
+        else:
+            # handle pagination
+            pagination_request = self.handle_pagination(response, self.parse_sub_category3, len(card_blocks))
+            yield pagination_request
         for html in card_blocks:
             body = html.encode('utf-8')
             block = response.replace(body=body)
@@ -164,11 +189,12 @@ class TestSpider(scrapy.Spider):
             l.add_value('price', price)
             l.add_value('product_id', id)
             l.add_value('page', self.get_uri(response.url))
-            l.add_value('html', block.text)
+            #l.add_value('html', block.text)
+            l.add_value('html', 'block html here')
             ymarket_link = ''.join(block.css('div[class="price-in-shops"] span').xpath('@data-link').extract())
             yield l.load_item()
             link = ''.join([self.base_url, url])
-            request = self.getRequest(link, self.parse_product_page)
+            request = self.getRequest(link, self.parse_product_page, True)
             request.meta['parent'] = url
             request.meta['category'] = self.get_uri(response.url)
             request.meta['ymarket_link'] = ymarket_link
@@ -183,8 +209,6 @@ class TestSpider(scrapy.Spider):
             request_img.meta['product_id'] = id
             request_img.meta['autotype'] = True
             yield request_img
-        # handle pagination
-        self.handle_pagination(response, self.parse_sub_category3, len(card_blocks))
 
     def get_uri(self, url):
         return url.replace(self.base_url, '').split('?')[0]
@@ -201,7 +225,7 @@ class TestSpider(scrapy.Spider):
             count = default_count
         self.logger.info('handle pagination: count={count}'.format(count=count))
         count_pages = math.ceil(count / 72.0)
-        self.logger.info('handle pagination: count_pages={count_pages}'.format(count=count))
+        self.logger.info('handle pagination: count_pages={count_pages}'.format(count_pages=count_pages))
         category_uri = self.get_uri(response.url)
         if count_pages > 1:
             if category_uri not in self.pagination:
@@ -216,7 +240,7 @@ class TestSpider(scrapy.Spider):
             self.logger.info('page {page} for category {category}'.format(page=page, category=category_uri))
             request = self.getRequest(url, callback=callback)
             request.meta['parent'] = response.meta['parent']
-            yield request
+            return request
 
 
 
