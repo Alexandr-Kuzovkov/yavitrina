@@ -9,6 +9,7 @@
 *.ini
 !selenium/uwsgi.ini
 !selenium/requirements.txt
+!selenium/app/static/swagger.json
 *.txt
 *.csv
 *.env
