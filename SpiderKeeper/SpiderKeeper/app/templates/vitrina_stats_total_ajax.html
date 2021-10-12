@@ -14,6 +14,8 @@
     <div class="box-body">
         <p>Categories: {{ stat.category }}</p>
         <p>Tags: {{ stat.tag }}</p>
+        <p>Search Tags: {{ stat.search_tag }}</p>
+        <p>Category Tags: {{ stat.category_tag }}</p>
         <p>Images: {{ stat.image }}</p>
         <p>Product cards: {{ stat.product_card }}</p>
         <p>Products: {{ stat.product }}</p>
@@ -34,6 +36,8 @@
                 <th style="width: 30px">Date</th>
                 <th style="width: 160px">Categories</th>
                 <th style="width: 160px">Tags</th>
+                <th style="width: 160px">Search Tags</th>
+                <th style="width: 160px">Category Tags</th>
                 <th style="width: 160px">Images</th>
                 <th style="width: 160px">Product cards</th>
                 <th style="width: 160px">Products</th>
@@ -43,6 +47,8 @@
                 <td>{{ datestr }}</td>
                 <td id="{{ datestr }}-category"><img src="/static/img/preload-small.gif"/></td>
                 <td id="{{ datestr }}-tag"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ datestr }}-search_tag"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ datestr }}-category_tag"><img src="/static/img/preload-small.gif"/></td>
                 <td id="{{ datestr }}-image"><img src="/static/img/preload-small.gif"/></td>
                 <td id="{{ datestr }}-product_card"><img src="/static/img/preload-small.gif"/></td>
                 <td id="{{ datestr }}-product"><img src="/static/img/preload-small.gif"/></td>
@@ -59,6 +65,8 @@
             for (var i=0; i < dates.length; i++){
                getCountForDate(dates[i], 'category')
                getCountForDate(dates[i], 'tag')
+               getCountForDate(dates[i], 'search_tag')
+               getCountForDate(dates[i], 'category_tag')
                getCountForDate(dates[i], 'image')
                getCountForDate(dates[i], 'product_card')
                getCountForDate(dates[i], 'product')
