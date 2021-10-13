@@ -25,4 +25,6 @@ RUN mkdir /etc/scrapyd
 RUN pip install scrapyd-client
 RUN sed -i "s/scrapy.utils.http/w3lib.http/g" /usr/local/bin/scrapyd-deploy
 RUN pip install alembic
+RUN pip install scrapy-headless
+RUN pip install selenium
 CMD ["/usr/local/bin/start.sh"]

@@ -167,14 +167,28 @@ class PgSQLStoreBase(object):
 class PgSQLStore(PgSQLStoreBase):
 
     def get_stat(self, entity):
-        res = self._getone("SELECT count(*) AS count FROM " + entity)
+        if entity == 'brocken_product':
+            res = self._getone("SELECT count(*) AS count FROM product WHERE (description ISNULL OR description='') AND (title ISNULL OR title='')")
+        elif entity == 'product_with_params':
+            res = self._getone("SELECT count(* ) AS count FROM product WHERE (parameters NOTNULL AND char_length(parameters) >= 200)")
+        elif entity == 'product_with_feedback':
+            res = self._getone("SELECT count(*) AS count FROM product WHERE (feedbacks NOTNULL AND char_length(feedbacks) >= 200)")
+        else:
+            res = self._getone("SELECT count(*) AS count FROM " + entity)
         if res and len(res):
             return int(res[0])
         else:
             return 0
 
     def get_count_for_date(self, datestr, entity):
-        query = "SELECT count(*) AS count FROM {entity} WHERE date(created_at)='{date}'".format(entity=entity, date=datestr)
+        if entity == 'brocken_product':
+            query = "SELECT count(*) AS count FROM product WHERE (description ISNULL OR description='') AND (title ISNULL OR title='') AND date(created_at)='{date}'".format(date=datestr)
+        elif entity == 'product_with_params':
+            query = "SELECT count(* ) AS count FROM product WHERE (parameters NOTNULL AND char_length(parameters) >= 200) AND date(created_at)='{date}'".format(date=datestr)
+        elif entity == 'product_with_feedback':
+            query = "SELECT count(*) AS count FROM product WHERE (feedbacks NOTNULL AND char_length(feedbacks) >= 200) AND date(created_at)='{date}'".format(date=datestr)
+        else:
+            query = "SELECT count(*) AS count FROM {entity} WHERE date(created_at)='{date}'".format(entity=entity, date=datestr)
         try:
             result = 0
             connection = self.pool.getconn()

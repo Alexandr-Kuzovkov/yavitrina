@@ -19,6 +19,9 @@
         <p>Images: {{ stat.image }}</p>
         <p>Product cards: {{ stat.product_card }}</p>
         <p>Products: {{ stat.product }}</p>
+        <p>Brocken product: {{ stat.brocken_product }}</p>
+        <p>Products with parameters: {{ stat.product_with_params }}</p>
+        <p>Products with feedback: {{ stat.product_with_feedback }}</p>
     </div>
 </div>
 
@@ -33,14 +36,14 @@
     <div class="box-body table-responsive">
         <table class="table table-striped">
             <tr>
-                <th style="width: 30px">Date</th>
-                <th style="width: 160px">Categories</th>
-                <th style="width: 160px">Tags</th>
-                <th style="width: 160px">Search Tags</th>
-                <th style="width: 160px">Category Tags</th>
-                <th style="width: 160px">Images</th>
-                <th style="width: 160px">Product cards</th>
-                <th style="width: 160px">Products</th>
+                <th style="width: 60px">Date</th>
+                <th style="width: 150px">Categories</th>
+                <th style="width: 150px">Tags</th>
+                <th style="width: 150px">Search Tags</th>
+                <th style="width: 150px">Category Tags</th>
+                <th style="width: 150px">Images</th>
+                <th style="width: 150px">Product cards</th>
+                <th style="width: 150px">Products</th>
             </tr>
             {% for datestr in dates %}
             <tr>
@@ -52,6 +55,34 @@
                 <td id="{{ datestr }}-image"><img src="/static/img/preload-small.gif"/></td>
                 <td id="{{ datestr }}-product_card"><img src="/static/img/preload-small.gif"/></td>
                 <td id="{{ datestr }}-product"><img src="/static/img/preload-small.gif"/></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-header">
+        <h3 class="box-title">More options</h3>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body table-responsive">
+        <table class="table table-striped">
+            <tr>
+                <th style="width: 60px">Date</th>
+                <th style="width: 140px">Broken Products</th>
+                <th style="width: 140px">Products with parameters</th>
+                <th style="width: 140px">Products with feedback</th>
+            </tr>
+            {% for datestr in dates %}
+            <tr>
+                <td>{{ datestr }}</td>
+                <td id="{{ datestr }}-brocken_product"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ datestr }}-product_with_params"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ datestr }}-product_with_feedback"><img src="/static/img/preload-small.gif"/></td>
             </tr>
             {% endfor %}
         </table>
@@ -70,7 +101,9 @@
                getCountForDate(dates[i], 'image')
                getCountForDate(dates[i], 'product_card')
                getCountForDate(dates[i], 'product')
-
+               getCountForDate(dates[i], 'brocken_product')
+               getCountForDate(dates[i], 'product_with_params')
+               getCountForDate(dates[i], 'product_with_feedback')
             }
         }
 

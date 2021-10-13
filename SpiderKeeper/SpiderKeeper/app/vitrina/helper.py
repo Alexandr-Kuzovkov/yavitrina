@@ -27,7 +27,10 @@ def get_dates():
 
 def get_stat():
     stat = {}
-    for entity in ['category', 'tag', 'image', 'product', 'product_card', 'search_tag', 'category_tag']:
+    for entity in [
+        'category', 'tag', 'image', 'product', 'product_card', 'search_tag',
+        'category_tag', 'brocken_product', 'product_with_params', 'product_with_feedback'
+    ]:
         count = db.get_stat(entity)
         stat[entity] = count
     return stat

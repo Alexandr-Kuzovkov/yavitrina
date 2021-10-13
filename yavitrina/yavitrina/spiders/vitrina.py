@@ -22,6 +22,8 @@ from yavitrina.items import SearchTagItem
 from yavitrina.items import CategoryTagItem
 from yavitrina.scrapestack import ScrapestackRequest
 from yavitrina.seleniumrequest import SelenuimRequest
+from scrapy_headless import HeadlessRequest
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 
 class VitrinaSpider(scrapy.Spider):
@@ -42,6 +44,18 @@ class VitrinaSpider(scrapy.Spider):
     clear_db = False
     paginations = {}
     scrapestack_access_key = ''
+    #product_page_request_type = 'headless'
+    product_page_request_type = 'selenium'
+    custom_settings = {
+        'SELENIUM_GRID_URL': 'http://selenium-hub:4444/wd/hub',  # Example for local grid with docker-compose
+        'SELENIUM_NODES': 1,  # Number of nodes(browsers) you are running on your grid
+        'SELENIUM_CAPABILITIES': DesiredCapabilities.CHROME,
+        'DOWNLOAD_HANDLERS': {
+            "http": "scrapy_headless.HeadlessDownloadHandler",
+            "https": "scrapy_headless.HeadlessDownloadHandler",
+        }
+    }
+
 
 
     def __init__(self, drain=False, noproxy=False, cleardb=False, *args, **kwargs):
@@ -54,7 +68,9 @@ class VitrinaSpider(scrapy.Spider):
             self.clear_db = True
 
     def getRequest(self, url, callback, request_type='splash', dont_filter=False):
-        if request_type == 'selenium':
+        if request_type == 'headless':
+            request = HeadlessRequest(url, callback=callback)
+        elif request_type == 'selenium':
             request = SelenuimRequest(url, callback=callback, dont_filter=dont_filter, options={'minsize': 2048, 'wait': 2})
         elif request_type == 'scrapestack':
             request = ScrapestackRequest(url, callback=callback, access_key=self.scrapestack_access_key, dont_filter=dont_filter, options={'render_js': 1})
@@ -226,7 +242,7 @@ class VitrinaSpider(scrapy.Spider):
             ymarket_link = ''.join(block.css('div[class="price-in-shops"] span').xpath('@data-link').extract())
             yield l.load_item()
             link = ''.join([self.base_url, url])
-            request = self.getRequest(link, self.parse_product_page, dont_filter=True, request_type='selenium')
+            request = self.getRequest(link, self.parse_product_page, dont_filter=True, request_type=self.product_page_request_type)
             request.meta['parent'] = url
             request.meta['category'] = self.get_uri(response.url)
             request.meta['ymarket_link'] = ymarket_link
@@ -258,7 +274,7 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('html', block.text)
             yield l.load_item()
         # save search_tag
-        search_tags_blocks = response.css('div[class="search-tags"] div[class="list"] a')
+        search_tags_blocks = response.css('div[class="search-tags"] div[class="list"] a').extract()
         for html in search_tags_blocks:
             body = html.encode('utf-8')
             block = response.replace(body=body)
@@ -275,7 +291,7 @@ class VitrinaSpider(scrapy.Spider):
             request.meta['parent'] = url
             yield request
         # save new category tag
-        category_tags_blocks = response.css('div[class="category-new"] div[class="list"] a')
+        category_tags_blocks = response.css('div[class="category-new"] div[class="list"] a').extract()
         for html in category_tags_blocks:
             body = html.encode('utf-8')
             block = response.replace(body=body)
@@ -340,7 +356,7 @@ class VitrinaSpider(scrapy.Spider):
             ymarket_link = ''.join(block.css('div[class="price-in-shops"] span').xpath('@data-link').extract())
             yield l.load_item()
             link = ''.join([self.base_url, url])
-            request = self.getRequest(link, self.parse_product_page, dont_filter=True, request_type='selenium')
+            request = self.getRequest(link, self.parse_product_page, dont_filter=True, request_type=self.product_page_request_type)
             request.meta['parent'] = url
             request.meta['category'] = self.get_uri(response.url)
             request.meta['ymarket_link'] = ymarket_link

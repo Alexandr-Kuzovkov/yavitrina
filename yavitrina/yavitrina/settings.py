@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 # Scrapy settings for yavitrina project
 #
 # For simplicity, this file contains only settings considered important or
@@ -23,8 +22,8 @@ ROBOTSTXT_OBEY = False
 
 #DUPEFILTER_DEBUG = True
 
-#LOG_LEVEL = 'INFO'
-LOG_LEVEL = 'DEBUG'
+LOG_LEVEL = 'INFO'
+#LOG_LEVEL = 'DEBUG'
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 #CONCURRENT_REQUESTS = 32
@@ -43,8 +42,8 @@ CONCURRENT_REQUESTS_PER_DOMAIN = 16
 #COOKIES_ENABLED = False
 
 #SPLASH_URL = 'http://localhost:8050/'
-#SPLASH_URL = 'http://hub.kuzovkov12.ru:8050/'
-SPLASH_URL = 'http://172.105.247.179:9050/'
+SPLASH_URL = 'http://hub.kuzovkov12.ru:8050/'
+#SPLASH_URL = 'http://172.105.247.179:9050/'
 #SPLASH_URL = 'http://splash:8050/'
 HTTPERROR_ALLOWED_CODES =[400,404]
 
@@ -117,4 +116,5 @@ HTTPCACHE_STORAGE = 'scrapy_splash.SplashAwareFSCacheStorage'
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 COOKIES_ENABLED = True
+
 

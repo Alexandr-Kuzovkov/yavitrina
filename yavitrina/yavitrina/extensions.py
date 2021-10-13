@@ -156,14 +156,14 @@ class PgSQLStore(PgSQLBase):
     def save_category(self, data):
         categories = self._get('category', field_list=None, where='url=%s', data=[data['url']])
         if len(categories) > 0:
+            return None
+        else:
             if 'parent_url' in data:
                 res = self._get('category', field_list=['id'], where='url=%s', data=[data['parent_url']])
                 if len(res) > 0:
                     data['parent_id'] = res[0]['id']
             res = self._insert('category', [data])
             return res
-        else:
-            return None
 
     def save_tag(self, data):
         res = self._get('tag', field_list=None, where='title=%s', data=[data['title']])

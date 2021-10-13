@@ -108,6 +108,26 @@ services:
       - back
     user: apps
 
+  selenium-hub:
+    image: selenium/hub
+    networks:
+      - back
+    ports:
+      - 4444:4444
+
+  chrome:
+    image: selenium/node-chrome
+    links:
+      - selenium-hub:hub
+    environment:
+      - HUB_PORT_4444_TCP_ADDR=selenium-hub:4444/grid/register/
+      - GRID_TIMEOUT=180 # Default timeout is 30s might be low for Selenium
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - back
+
+
 networks:
   back:
     driver: bridge
