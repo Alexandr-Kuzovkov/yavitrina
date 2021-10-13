@@ -22,6 +22,8 @@ from yavitrina.items import ProductItem
 from yavitrina.items import ImageItem
 from yavitrina.scrapestack import ScrapestackRequest
 from yavitrina.seleniumrequest import SelenuimRequest
+from scrapy_headless import HeadlessRequest
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 
 class TestSpider(scrapy.Spider):
@@ -41,6 +43,16 @@ class TestSpider(scrapy.Spider):
     lua_src = pkgutil.get_data('yavitrina', 'lua/html-render.lua')
     scrapestack_access_key = ''
 
+    custom_settings = {
+        'SELENIUM_GRID_URL': 'http://selenium-hub:4444/wd/hub',  # Example for local grid with docker-compose
+        'SELENIUM_NODES': 1,  # Number of nodes(browsers) you are running on your grid
+        'SELENIUM_CAPABILITIES': DesiredCapabilities.CHROME,
+        'DOWNLOAD_HANDLERS': {
+            "http": "scrapy_headless.HeadlessDownloadHandler",
+            "https": "scrapy_headless.HeadlessDownloadHandler",
+        }
+    }
+
     def __init__(self, drain=False, noproxy=False, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
         if drain:
@@ -49,7 +61,9 @@ class TestSpider(scrapy.Spider):
             self.use_splash = False
 
     def getRequest(self, url, callback, request_type='splash', dont_filter=False):
-        if request_type == 'selenium':
+        if request_type == 'headless':
+            request = HeadlessRequest(url, callback=callback)
+        elif request_type == 'selenium':
             request = SelenuimRequest(url, callback=callback, dont_filter=dont_filter, options={'minsize': 2048, 'wait': 2})
         elif request_type == 'scrapestack':
             request = ScrapestackRequest(url, callback=callback, access_key=self.scrapestack_access_key, dont_filter=dont_filter, options={'render_js': 1})
@@ -64,7 +78,8 @@ class TestSpider(scrapy.Spider):
         url = 'https://yavitrina.ru/product/674779192'
         url = 'https://yavitrina.ru/product/677731028'
         #request = self.getRequest(url, self.parse_product_page, request_type='scrapestack')
-        request = self.getRequest(url, self.parse_product_page, request_type='selenium')
+        #request = self.getRequest(url, self.parse_product_page, request_type='selenium')
+        request = self.getRequest(url, self.parse_product_page, request_type='headless')
         #request = self.getRequest(url, self.parse_product_page)
         #url = 'https://yavitrina.ru/shampuni'
         #url = 'https://yavitrina.ru/verhnyaya-odezhda-dlya-malyshey'
@@ -84,14 +99,14 @@ class TestSpider(scrapy.Spider):
         parameters = ' '.join(response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
         feedbacks = '##@@@!!!'.join(response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
         product_id = response.url.split('/').pop()
-        product_id = response.request.url_origin.split('/').pop()
+        #product_id = response.request.url_origin.split('/').pop()
         categories = response.css('div[class="b-top"] li[class="breadcrumbs-item"] a').xpath('@href').extract()
         l = ItemLoader(item=ProductItem(), response=response)
         l.add_value('product_id', product_id)
         l.add_value('html', response.text)
         #l.add_value('html', 'product html here')
-        #l.add_value('url', response.url)
-        l.add_value('url', response.request.url_origin)
+        l.add_value('url', response.url)
+        #l.add_value('url', response.request.url_origin)
         l.add_value('title', title)
         l.add_value('description', description)
         l.add_value('price', price)
