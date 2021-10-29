@@ -156,14 +156,14 @@ class PgSQLStore(PgSQLBase):
     def save_category(self, data):
         categories = self._get('category', field_list=None, where='url=%s', data=[data['url']])
         if len(categories) > 0:
+            return None
+        else:
             if 'parent_url' in data:
                 res = self._get('category', field_list=['id'], where='url=%s', data=[data['parent_url']])
                 if len(res) > 0:
                     data['parent_id'] = res[0]['id']
             res = self._insert('category', [data])
             return res
-        else:
-            return None
 
     def save_tag(self, data):
         res = self._get('tag', field_list=None, where='title=%s', data=[data['title']])
@@ -227,6 +227,42 @@ class PgSQLStore(PgSQLBase):
             res = self._insert('image', [data])
             return res
         return None
+
+    def save_search_tag(self, data):
+        res = self._get('search_tag', field_list=None, where='title=%s', data=[data['title']])
+        if len(res) > 0:
+            tag = res[0]
+            if tag['page'] is not None:
+                pages = tag['page'].split(',')
+                pages.append(data['page'])
+                pages = list(set(pages))
+                data['page'] = ','.join(pages)
+                sql = "UPDATE search_tag SET page=%s WHERE id=%s"
+                self.dbopen()
+                self.cur.execute(sql, [data['page'], tag['id']])
+                self.conn.commit()
+            return None
+        else:
+            res = self._insert('search_tag', [data])
+            return res
+
+    def save_category_tag(self, data):
+        res = self._get('category_tag', field_list=None, where='title=%s', data=[data['title']])
+        if len(res) > 0:
+            tag = res[0]
+            if tag['page'] is not None:
+                pages = tag['page'].split(',')
+                pages.append(data['page'])
+                pages = list(set(pages))
+                data['page'] = ','.join(pages)
+                sql = "UPDATE category_tag SET page=%s WHERE id=%s"
+                self.dbopen()
+                self.cur.execute(sql, [data['page'], tag['id']])
+                self.conn.commit()
+            return None
+        else:
+            res = self._insert('category_tag', [data])
+            return res
 
 
 
