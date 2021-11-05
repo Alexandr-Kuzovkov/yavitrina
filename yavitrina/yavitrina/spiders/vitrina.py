@@ -383,8 +383,7 @@ class VitrinaSpider(scrapy.Spider):
             price = None
         shop_link = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="btn-box"] a[class="btn btn-in-shops"]').xpath('@href').extract())
         shop_link2 = ' '.join(response.css('div[class="product_tabs"] section[id="content1"] a').xpath('@href').extract())
-        parameters = ' '.join(
-            response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
+        parameters = ' '.join(response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
         body = parameters.encode('utf-8')
         block = response.replace(body=body)
         block.xpath(u'//article/header/following-sibling::div[1]').xpath(u'//div[@data-tid]/span/text()').extract()
