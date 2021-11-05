@@ -64,7 +64,7 @@ class TestSpider(scrapy.Spider):
         if request_type == 'headless':
             request = HeadlessRequest(url, callback=callback)
         elif request_type == 'selenium':
-            request = SelenuimRequest(url, callback=callback, dont_filter=dont_filter, options={'minsize': 2048, 'wait': 2})
+            request = SelenuimRequest(url, callback=callback, dont_filter=dont_filter, options={'minsize': 2, 'wait': 2})
         elif request_type == 'scrapestack':
             request = ScrapestackRequest(url, callback=callback, access_key=self.scrapestack_access_key, dont_filter=dont_filter, options={'render_js': 1})
         elif request_type == 'splash':
@@ -77,9 +77,14 @@ class TestSpider(scrapy.Spider):
     def start_requests(self):
         url = 'https://yavitrina.ru/product/674779192'
         url = 'https://yavitrina.ru/product/677731028'
+        url = 'https://yavitrina.ru/product/14008662'
+        url = 'https://hub.kuzovkov12.ru:8001/googleapi'
+        DOCKER_HOST_IP = os.popen("ip ro | grep default | cut -d' ' -f 3").read().strip()
+        url = 'http://{DOCKER_HOST_IP}:8002/googleapi'.format(DOCKER_HOST_IP=DOCKER_HOST_IP)
         #request = self.getRequest(url, self.parse_product_page, request_type='scrapestack')
-        #request = self.getRequest(url, self.parse_product_page, request_type='selenium')
-        request = self.getRequest(url, self.parse_product_page, request_type='headless')
+        request = self.getRequest(url, self.parse_product_page, request_type='selenium')
+        #request = self.getRequest(url, self.parse_product_page, request_type='headless')
+
         #request = self.getRequest(url, self.parse_product_page)
         #url = 'https://yavitrina.ru/shampuni'
         #url = 'https://yavitrina.ru/verhnyaya-odezhda-dlya-malyshey'
@@ -88,6 +93,8 @@ class TestSpider(scrapy.Spider):
         yield request
 
     def parse_product_page(self, response):
+        pprint(response.text)
+        exit()
         title = ' '.join(response.css('div[class="product-page"] div[class="p-info"] h1').xpath('text()').extract())
         description = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="desc"] p[class="d-text"]').xpath('text()').extract())
         try:
@@ -95,18 +102,23 @@ class TestSpider(scrapy.Spider):
         except Exception as ex:
             price = None
         shop_link = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="btn-box"] a[class="btn btn-in-shops"]').xpath('@href').extract())
-        shop_link2 = ' '.join(response.css('div[class="product_tabs"] section[id="content1"] div[id="cardmarlet"]').extract())
-        parameters = ' '.join(response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
-        feedbacks = '##@@@!!!'.join(response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
-        product_id = response.url.split('/').pop()
-        #product_id = response.request.url_origin.split('/').pop()
+        shop_link2 = ' '.join(response.css('div[class="product_tabs"] section[id="content1"] a').xpath('@href').extract())
+        parameters = ' '.join(
+            response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
+        body = parameters.encode('utf-8')
+        block = response.replace(body=body)
+        block.xpath(u'//article/header/following-sibling::div[1]').xpath(u'//div[@data-tid]/span/text()').extract()
+        feedbacks = '##@@@!!!'.join(
+            response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
         categories = response.css('div[class="b-top"] li[class="breadcrumbs-item"] a').xpath('@href').extract()
         l = ItemLoader(item=ProductItem(), response=response)
+        url = response.request.url
+        if hasattr(response.request, 'url_origin'):
+            url = response.request.url_origin
+        product_id = url.split('/').pop()
         l.add_value('product_id', product_id)
         l.add_value('html', response.text)
-        #l.add_value('html', 'product html here')
-        l.add_value('url', response.url)
-        #l.add_value('url', response.request.url_origin)
+        l.add_value('url', url)
         l.add_value('title', title)
         l.add_value('description', description)
         l.add_value('price', price)
@@ -125,6 +137,8 @@ class TestSpider(scrapy.Spider):
         #save images
         image_urls = response.css('div[class="photos"] img').xpath('@src').extract()
         for link in image_urls:
+            if link.startswith('//') or (not link.startswith('https:')):
+                link = 'https:{img}'.format(img=link)
             request = scrapy.Request(link, self.download_image)
             request.meta['product_id'] = product_id
             request.meta['filename'] = '-'.join(link.split('/')[-3:])

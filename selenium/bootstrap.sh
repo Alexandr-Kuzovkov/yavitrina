@@ -45,7 +45,7 @@ run_nginx() {
 }
 
 run_uwsgi(){
-   uwsgi --ini /usr/src/uwsgi.ini
+   uwsgi --ini /usr/src/uwsgi.ini --processes 8 --threads 8
 }
 
 trap control_c SIGINT SIGTERM SIGHUP

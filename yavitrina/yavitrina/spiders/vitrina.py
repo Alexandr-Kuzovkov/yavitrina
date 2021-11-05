@@ -385,6 +385,9 @@ class VitrinaSpider(scrapy.Spider):
         shop_link2 = ' '.join(response.css('div[class="product_tabs"] section[id="content1"] a').xpath('@href').extract())
         parameters = ' '.join(
             response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
+        body = parameters.encode('utf-8')
+        block = response.replace(body=body)
+        block.xpath(u'//article/header/following-sibling::div[1]').xpath(u'//div[@data-tid]/span/text()').extract()
         feedbacks = '##@@@!!!'.join(
             response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
         product_id = response.url.split('/').pop()
