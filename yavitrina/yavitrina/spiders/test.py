@@ -109,8 +109,7 @@ class TestSpider(scrapy.Spider):
         shop_link = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="btn-box"] a[class="btn btn-in-shops"]').xpath('@href').extract())
         shop_link2 = ' '.join(response.css('div[class="product_tabs"] section[id="content1"] a').xpath('@href').extract())
         parameters_html = ' '.join(response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
-        feedbacks = '##@@@!!!'.join(
-            response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
+        feedbacks_html = ' '.join(response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
         categories = response.css('div[class="b-top"] li[class="breadcrumbs-item"] a').xpath('@href').extract()
         l = ItemLoader(item=ProductItem(), response=response)
         url = response.request.url
@@ -128,6 +127,7 @@ class TestSpider(scrapy.Spider):
             l.add_value('shop_link2', response.meta['ymarket_link'])
         parameters = self.parse_parameters(response, parameters_html)
         l.add_value('parameters', parameters)
+        feedbacks = self.parse_feedbacks(response, parameters_html)
         l.add_value('feedbacks', feedbacks)
         if len(categories) > 0:
             for category in categories:
@@ -288,17 +288,20 @@ class TestSpider(scrapy.Spider):
     def parse_parameters(self, response, parameters_html):
         body = parameters_html
         block = response.replace(body=body.encode('utf-8'))
-        #print(block.text)
-        #params = u' '.join(block.xpath(u'//article/header/following-sibling::div[1]').xpath(u'//div[@data-tid]/span/text()').extract())
         params = block.xpath(u'//article/header/following-sibling::div[1]').xpath(u'//div[@data-tid]/span/text()').extract()
         data = {}
         for i in range(0, len(params), 2):
             data[params[i]] = params[i+1]
         return json.dumps(data)
-        #params = ' '.join(block.xpath(u'//article/header/following-sibling::div[1]').extract())
-        #return params
-        #return block.text
-        #return json.dumps(params).encode('utf-8')
+
+    def parse_feedbacks(self, response, feebacks_html):
+        body = feebacks_html
+        block = response.replace(body=body.encode('utf-8'))
+        params = block.xpath(u'//article/header/following-sibling::div[1]').xpath(u'//div[@data-tid]/span/text()').extract()
+        data = {}
+        for i in range(0, len(params), 2):
+            data[params[i]] = params[i+1]
+        return json.dumps(data)
 
 
 
