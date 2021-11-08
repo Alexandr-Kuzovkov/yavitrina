@@ -170,9 +170,9 @@ class PgSQLStore(PgSQLStoreBase):
         if entity == 'brocken_product':
             res = self._getone("SELECT count(*) AS count FROM product WHERE (description ISNULL OR description='') AND (title ISNULL OR title='')")
         elif entity == 'product_with_params':
-            res = self._getone("SELECT count(* ) AS count FROM product WHERE (parameters NOTNULL AND char_length(parameters) >= 200)")
+            res = self._getone("SELECT count(* ) AS count FROM product WHERE parameters NOTNULL")
         elif entity == 'product_with_feedback':
-            res = self._getone("SELECT count(*) AS count FROM product WHERE (feedbacks NOTNULL AND char_length(feedbacks) >= 200)")
+            res = self._getone("SELECT count(*) AS count FROM product WHERE feedbacks NOTNULL")
         else:
             res = self._getone("SELECT count(*) AS count FROM " + entity)
         if res and len(res):
@@ -184,9 +184,9 @@ class PgSQLStore(PgSQLStoreBase):
         if entity == 'brocken_product':
             query = "SELECT count(*) AS count FROM product WHERE (description ISNULL OR description='') AND (title ISNULL OR title='') AND date(created_at)='{date}'".format(date=datestr)
         elif entity == 'product_with_params':
-            query = "SELECT count(* ) AS count FROM product WHERE (parameters NOTNULL AND char_length(parameters) >= 200) AND date(created_at)='{date}'".format(date=datestr)
+            query = "SELECT count(* ) AS count FROM product WHERE parameters NOTNULL AND date(created_at)='{date}'".format(date=datestr)
         elif entity == 'product_with_feedback':
-            query = "SELECT count(*) AS count FROM product WHERE (feedbacks NOTNULL AND char_length(feedbacks) >= 200) AND date(created_at)='{date}'".format(date=datestr)
+            query = "SELECT count(*) AS count FROM product WHERE feedbacks NOTNULL AND date(created_at)='{date}'".format(date=datestr)
         else:
             query = "SELECT count(*) AS count FROM {entity} WHERE date(created_at)='{date}'".format(entity=entity, date=datestr)
         try:

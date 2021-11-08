@@ -44,8 +44,8 @@ class VitrinaSpider(scrapy.Spider):
     clear_db = False
     paginations = {}
     scrapestack_access_key = ''
-    #product_page_request_type = 'headless'
-    product_page_request_type = 'selenium'
+    product_page_request_type = 'headless'
+    #product_page_request_type = 'selenium'
     custom_settings = {
         'SELENIUM_GRID_URL': 'http://selenium-hub:4444/wd/hub',  # Example for local grid with docker-compose
         'SELENIUM_NODES': 1,  # Number of nodes(browsers) you are running on your grid
@@ -375,6 +375,7 @@ class VitrinaSpider(scrapy.Spider):
         self.handle_pagination(response, self.parse_sub_category3, len(card_blocks))
 
     def parse_product_page(self, response):
+        #pprint(response.text)
         title = ' '.join(response.css('div[class="product-page"] div[class="p-info"] h1').xpath('text()').extract())
         description = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="desc"] p[class="d-text"]').xpath('text()').extract())
         try:
@@ -383,25 +384,24 @@ class VitrinaSpider(scrapy.Spider):
             price = None
         shop_link = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="btn-box"] a[class="btn btn-in-shops"]').xpath('@href').extract())
         shop_link2 = ' '.join(response.css('div[class="product_tabs"] section[id="content1"] a').xpath('@href').extract())
-        parameters = ' '.join(response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
-        body = parameters.encode('utf-8')
-        block = response.replace(body=body)
-        block.xpath(u'//article/header/following-sibling::div[1]').xpath(u'//div[@data-tid]/span/text()').extract()
-        feedbacks = '##@@@!!!'.join(
-            response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
-        product_id = response.url.split('/').pop()
         categories = response.css('div[class="b-top"] li[class="breadcrumbs-item"] a').xpath('@href').extract()
         l = ItemLoader(item=ProductItem(), response=response)
+        url = response.request.url
+        if hasattr(response.request, 'url_origin'):
+            url = response.request.url_origin
+        product_id = url.split('/').pop()
         l.add_value('product_id', product_id)
         l.add_value('html', response.text)
-        l.add_value('url', response.url)
+        l.add_value('url', url)
         l.add_value('title', title)
         l.add_value('description', description)
         l.add_value('price', price)
         l.add_value('shop_link', shop_link)
         if 'ymarket_link' in response.meta and len(response.meta['ymarket_link']) > 0:
             l.add_value('shop_link2', response.meta['ymarket_link'])
+        parameters = self.parse_parameters(response)
         l.add_value('parameters', parameters)
+        feedbacks = self.parse_feedbacks(response)
         l.add_value('feedbacks', feedbacks)
         if len(categories) > 0:
             for category in categories:
@@ -468,6 +468,35 @@ class VitrinaSpider(scrapy.Spider):
             request = self.getRequest(url, callback=callback)
             request.meta['parent'] = response.meta['parent']
             return request
+
+    def parse_parameters(self, response):
+        parameters_html = ' '.join(response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
+        body = parameters_html
+        block = response.replace(body=body.encode('utf-8'))
+        params = block.xpath(u'//article/header/following-sibling::div[1]').xpath(u'//div[@data-tid]/span/text()').extract()
+        data = {}
+        for i in range(0, len(params), 2):
+            data[params[i]] = params[i+1]
+        return json.dumps(data)
+
+    def parse_feedbacks(self, response):
+        feedbacks_html = ' '.join(response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
+        body = feedbacks_html.encode('utf-8')
+        block = response.replace(body=body)
+        fb_blocks = block.xpath(u'//div[text() = "Отзывы"]/following-sibling::div[1]/div').extract()
+        data = []
+        for fb_block in fb_blocks:
+            item = {}
+            fb_response = response.replace(body=fb_block.encode('utf-8'))
+            item['name'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[1]/span').xpath('text()').extract())
+            item['eval'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[2]/div/div').xpath('text()').extract())
+            item['opinion'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[2]/span[1]').xpath('text()').extract())
+            item['experience'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[2]/span[2]').xpath('text()').extract())
+            item['plus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Достоинства']/following-sibling::p[1]").xpath('text()').extract())
+            item['minus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Недостатки']/following-sibling::p[1]").xpath('text()').extract())
+            item['comment'] = ' '.join(fb_response.xpath(u"//span[text() = 'Комментарий']/following-sibling::p[1]").xpath('text()').extract())
+            data.append(item)
+        return json.dumps(data)
 
 
 
