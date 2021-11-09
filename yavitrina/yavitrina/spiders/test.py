@@ -83,6 +83,8 @@ class TestSpider(scrapy.Spider):
     def start_requests(self):
         url = 'https://yavitrina.ru/product/674779192'
         url = 'https://yavitrina.ru/product/677731028'
+        url = 'https://yavitrina.ru/product/382715171'
+        url = 'https://yavitrina.ru/product/822105004'
         #url = 'https://yavitrina.ru/product/14008662'
         #url = 'https://hub.kuzovkov12.ru:8001/googleapi'
         #DOCKER_HOST_IP = os.popen("ip ro | grep default | cut -d' ' -f 3").read().strip()

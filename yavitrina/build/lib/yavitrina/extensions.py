@@ -137,6 +137,35 @@ class PgSQLBase(object):
         self.conn.commit()
         return {'result': True}
 
+    def _update(self, table, data, cond):
+        if type(data) is not dict:
+            raise Exception('Type of data must be dict!')
+        if type(cond) is not dict:
+            raise Exception('Type of cond must be dict!')
+        self.dbopen()
+        #self.cur.execute(' '.join(["SELECT setval('", table+'_id_seq', "', (SELECT max(id) FROM", table, '));']))
+        sets = []
+        for fld, val in data.items():
+            sets.append('{fld}=%s'.format(fld=fld))
+        conds = []
+        for fld, val in cond.items():
+            conds.append('{fld}=%s'.format(fld=fld))
+        if len(conds) > 0:
+            conds = ' AND '.join(conds)
+        else:
+            conds = 'TRUE'
+        sql = ' '.join(['UPDATE', table, 'SET', ','.join(sets), 'WHERE', conds])
+        values = map(lambda val: self._serialise_dict(val), data.values()) + map(lambda val: self._serialise_dict(val), cond.values())
+        try:
+            self.cur.execute(sql, values)
+        except psycopg2.Error, ex:
+            self.conn.rollback()
+            self.dbclose()
+            print ex
+            return {'result': False, 'error': ex}
+        self.conn.commit()
+        return {'result': True}
+
     def _serialise_dict(self, val):
         if type(val) is dict:
             return json.dumps(val)
@@ -209,8 +238,9 @@ class PgSQLStore(PgSQLBase):
             data['category_id'] = category_id
         products = self._get('product', field_list=None, where='product_id=%s', data=[data['product_id']])
         if len(products) > 0:
+            product = products[0]
+            self._update('product', data, {'id': product['id']})
             if category_id is not None:
-                product = products[0]
                 self._insert('product_category', [{'category_id': category_id, 'product_id': product['id']}])
                 return None
         else:

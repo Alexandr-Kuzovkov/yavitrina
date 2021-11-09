@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 # Scrapy settings for yavitrina project
 #
 # For simplicity, this file contains only settings considered important or
@@ -7,6 +8,7 @@
 #     http://doc.scrapy.org/en/latest/topics/settings.html
 #     http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 #     http://scrapy.readthedocs.org/en/latest/topics/spider-middleware.html
+
 
 BOT_NAME = 'yavitrina'
 
@@ -41,9 +43,13 @@ CONCURRENT_REQUESTS_PER_DOMAIN = 16
 # Disable cookies (enabled by default)
 #COOKIES_ENABLED = False
 
+DOCKER_HOST_IP = os.popen("ip ro | grep default | cut -d' ' -f 3").read().strip()
+
 #SPLASH_URL = 'http://localhost:8050/'
-#SPLASH_URL = 'http://hub.kuzovkov12.ru:8050/'
-SPLASH_URL = 'http://172.105.247.179:9050/'
+SPLASH_URL = 'http://hub.kuzovkov12.ru:8050/'
+#SPLASH_URL = 'http://172.105.247.179:9050/'
+#SPLASH_URL = 'http://{docker_host}:8060/'.format(docker_host=DOCKER_HOST_IP)
+
 #SPLASH_URL = 'http://splash:8050/'
 HTTPERROR_ALLOWED_CODES =[400,404]
 

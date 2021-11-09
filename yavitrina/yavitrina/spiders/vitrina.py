@@ -69,7 +69,7 @@ class VitrinaSpider(scrapy.Spider):
 
     def getRequest(self, url, callback, request_type='splash', dont_filter=False):
         if request_type == 'headless':
-            request = HeadlessRequest(url, callback=callback)
+            request = HeadlessRequest(url, callback=callback, driver_callback=self.process_webdriver)
         elif request_type == 'selenium':
             request = SelenuimRequest(url, callback=callback, dont_filter=dont_filter, options={'minsize': 2048, 'wait': 2})
         elif request_type == 'scrapestack':
@@ -85,6 +85,11 @@ class VitrinaSpider(scrapy.Spider):
         request = self.getRequest(self.base_url, self.parse_top_category)
         request.meta['url'] = self.base_url
         yield request
+
+    def process_webdriver(self, driver):
+        IMPLICITLY_WAIT = 3
+        driver.implicitly_wait(IMPLICITLY_WAIT)
+        time.sleep(IMPLICITLY_WAIT)
 
     # parse index page
     def parse_top_category(self, response):
