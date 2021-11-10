@@ -175,12 +175,21 @@ class PgSQLBase(object):
 
 class PgSQLStore(PgSQLBase):
 
+    exclude_tables = ['alembic_version']
+
     def clear_db(self):
         tables = self._get_tables_list()
-        for table in tables:
-            if table in ['alembic_version']:
+        while len(tables) > 0:
+            table = tables[0]
+            if table in self.exclude_tables:
+                tables.pop(0)
                 continue
-            self._clear_table(table)
+            try:
+                self._clear_table(table)
+            except psycopg2.Error, ex:
+                tables.append(tables.pop(0))
+            else:
+                tables.pop(0)
 
     def save_category(self, data):
         categories = self._get('category', field_list=None, where='url=%s', data=[data['url']])

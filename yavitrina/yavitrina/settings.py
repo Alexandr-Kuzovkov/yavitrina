@@ -46,8 +46,8 @@ CONCURRENT_REQUESTS_PER_DOMAIN = 16
 DOCKER_HOST_IP = os.popen("ip ro | grep default | cut -d' ' -f 3").read().strip()
 
 #SPLASH_URL = 'http://localhost:8050/'
-#SPLASH_URL = 'http://hub.kuzovkov12.ru:8050/'
-SPLASH_URL = 'http://172.105.247.179:9050/'
+SPLASH_URL = 'http://hub.kuzovkov12.ru:8050/'
+#SPLASH_URL = 'http://172.105.247.179:9050/'
 #SPLASH_URL = 'http://{docker_host}:8060/'.format(docker_host=DOCKER_HOST_IP)
 
 #SPLASH_URL = 'http://splash:8050/'
