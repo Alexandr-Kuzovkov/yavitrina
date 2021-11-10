@@ -24,11 +24,13 @@ from yavitrina.scrapestack import ScrapestackRequest
 from yavitrina.seleniumrequest import SelenuimRequest
 from scrapy_headless import HeadlessRequest
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from urllib import urlencode
 
 
 class VitrinaSpider(scrapy.Spider):
     name = 'vitrina'
-    allowed_domains = ['yavitrina.ru', 'i.yavitrina.ru']
+    #allowed_domains = ['yavitrina.ru', 'i.yavitrina.ru']
+    allowed_domains = []
     dirname = 'vitrina'
     handle_httpstatus_list = [400, 404]
     h = html2text.HTML2Text()
@@ -44,8 +46,10 @@ class VitrinaSpider(scrapy.Spider):
     clear_db = False
     paginations = {}
     scrapestack_access_key = ''
-    #product_page_request_type = 'headless'
-    product_page_request_type = 'selenium'
+    product_request_type = 'headless'
+    request_type = 'headless'
+    #product_request_type = 'selenium'
+    use_scrapestack = True
     custom_settings = {
         'SELENIUM_GRID_URL': 'http://selenium-hub:4444/wd/hub',  # Example for local grid with docker-compose
         'SELENIUM_NODES': 1,  # Number of nodes(browsers) you are running on your grid
@@ -56,29 +60,41 @@ class VitrinaSpider(scrapy.Spider):
         }
     }
 
-
-
-    def __init__(self, drain=False, noproxy=False, cleardb=False, *args, **kwargs):
+    def __init__(self, drain=False, noproxy=False, cleardb=False, request_type=False, product_request_type=False, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
         if drain:
             self.drain = True
         if noproxy:
-            self.use_splash = False
+            self.use_scrapestack = False
         if cleardb:
             self.clear_db = True
+        if request_type:
+            self.request_type = request_type
+        if product_request_type:
+            self.product_request_type = product_request_type
 
-    def getRequest(self, url, callback, request_type='splash', dont_filter=False):
+    def getRequest(self, url, callback, request_type=None, dont_filter=False):
+        url_origin = url
+        if request_type is None:
+            request_type = self.request_type
+        if self.use_scrapestack:
+            params = {'access_key': self.scrapestack_access_key, 'url': url}
+            url = 'http://api.scrapestack.com/scrape?' + urlencode(params)
         if request_type == 'headless':
-            request = HeadlessRequest(url, callback=callback)
+            request = HeadlessRequest(url, callback=callback, driver_callback=self.process_webdriver)
         elif request_type == 'selenium':
-            request = SelenuimRequest(url, callback=callback, dont_filter=dont_filter, options={'minsize': 2048, 'wait': 2})
+            request = SelenuimRequest(url, callback=callback, dont_filter=dont_filter, options={'minsize': 2028, 'wait': 2})
         elif request_type == 'scrapestack':
+            url = url_origin
             request = ScrapestackRequest(url, callback=callback, access_key=self.scrapestack_access_key, dont_filter=dont_filter, options={'render_js': 1})
         elif request_type == 'splash':
             args = {'wait': 10.0, 'lua_source': self.lua_src, 'timeout': 3600}
             request = SplashRequest(url, callback=callback, endpoint='execute', args=args, meta={"handle_httpstatus_all": True}, dont_filter=dont_filter)
+            request.meta['url_origin'] = url_origin
         else:
             request = scrapy.Request(url, callback=callback, dont_filter=dont_filter)
+        if self.use_scrapestack:
+            request.meta['url_origin'] = url_origin
         return request
 
     def start_requests(self):
@@ -86,6 +102,19 @@ class VitrinaSpider(scrapy.Spider):
         request.meta['url'] = self.base_url
         yield request
 
+    def process_webdriver(self, driver):
+        IMPLICITLY_WAIT = 3
+        driver.implicitly_wait(IMPLICITLY_WAIT)
+        time.sleep(IMPLICITLY_WAIT)
+
+
+    def get_request_url(self, response):
+        if 'url_origin' in response.meta:
+            return response.meta['url_origin']
+        elif hasattr(response.request, 'url_origin'):
+            return response.request.url_origin
+        else:
+            return response.request.url
     # parse index page
     def parse_top_category(self, response):
         result_blocks = response.css('div[class="category-list"] div[class="list"] a').extract()
@@ -119,6 +148,7 @@ class VitrinaSpider(scrapy.Spider):
 
     # parse subcategory (ex. Каталог -> Одежда и обувь)
     def parse_sub_category(self, response):
+        requested_url = self.get_request_url(response)
         result_blocks = response.css('div[class="hub-category"] div[class="item hub-item"]').extract()
         for html in result_blocks:
             body = html.encode('utf-8')
@@ -146,6 +176,7 @@ class VitrinaSpider(scrapy.Spider):
 
     # parse subcategory2 (ex. Каталог -> Одежда и обувь -> Обувь)
     def parse_sub_category2(self, response):
+        requested_url = self.get_request_url(response)
         # save tags
         tags_blocks = response.css('div[class="category-tags"] div a').extract()
         for html in tags_blocks:
@@ -156,7 +187,7 @@ class VitrinaSpider(scrapy.Spider):
             l = ItemLoader(item=TagItem(), response=response)
             l.add_value('url', url)
             l.add_value('title', title)
-            l.add_value('page', self.get_uri(response.url))
+            l.add_value('page', self.get_uri(requested_url))
             l.add_value('html', block.text)
             yield l.load_item()
         # save search_tag
@@ -169,7 +200,7 @@ class VitrinaSpider(scrapy.Spider):
             l = ItemLoader(item=SearchTagItem(), response=response)
             l.add_value('url', url)
             l.add_value('title', title)
-            l.add_value('page', self.get_uri(response.url))
+            l.add_value('page', self.get_uri(requested_url))
             l.add_value('html', block.text)
             yield l.load_item()
             link = ''.join([self.base_url, url])
@@ -186,7 +217,7 @@ class VitrinaSpider(scrapy.Spider):
             l = ItemLoader(item=CategoryTagItem(), response=response)
             l.add_value('url', url)
             l.add_value('title', title)
-            l.add_value('page', self.get_uri(response.url))
+            l.add_value('page', self.get_uri(requested_url))
             l.add_value('html', block.text)
             yield l.load_item()
             link = ''.join([self.base_url, url])
@@ -213,7 +244,7 @@ class VitrinaSpider(scrapy.Spider):
             yield request
         #save product cards
         card_blocks = response.css('div[class="products-list"] div.p-card').extract()
-        self.logger.info('parse_sub_category2: url: {url}; {count} products fetched'.format(url=response.url, count=len(card_blocks)))
+        self.logger.info('parse_sub_category2: url: {url}; {count} products fetched'.format(url=requested_url, count=len(card_blocks)))
         if len(card_blocks) == 0:
             message = ''.join(response.css('div[class="cat-text-null"] b').xpath('text()').extract())
             if len(response.text) < 200:
@@ -237,14 +268,14 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('title', title)
             l.add_value('price', price)
             l.add_value('product_id', id)
-            l.add_value('page', self.get_uri(response.url))
+            l.add_value('page', self.get_uri(requested_url))
             l.add_value('html', block.text)
             ymarket_link = ''.join(block.css('div[class="price-in-shops"] span').xpath('@data-link').extract())
             yield l.load_item()
             link = ''.join([self.base_url, url])
-            request = self.getRequest(link, self.parse_product_page, dont_filter=True, request_type=self.product_page_request_type)
+            request = self.getRequest(link, self.parse_product_page, dont_filter=True, request_type=self.product_request_type)
             request.meta['parent'] = url
-            request.meta['category'] = self.get_uri(response.url)
+            request.meta['category'] = self.get_uri(requested_url)
             request.meta['ymarket_link'] = ymarket_link
             yield request
             if img.startswith('//') or (not img.startswith('https:')):
@@ -260,6 +291,7 @@ class VitrinaSpider(scrapy.Spider):
 
     # parse subcategory3 (ex. Каталог -> Одежда и обувь -> Обувь -> Сандалии)
     def parse_sub_category3(self, response):
+        requested_url = self.get_request_url(response)
         # save tags
         tags_blocks = response.css('div[class="category-tags"] div a').extract()
         for html in tags_blocks:
@@ -270,7 +302,7 @@ class VitrinaSpider(scrapy.Spider):
             l = ItemLoader(item=TagItem(), response=response)
             l.add_value('url', url)
             l.add_value('title', title)
-            l.add_value('page', self.get_uri(response.url))
+            l.add_value('page', self.get_uri(requested_url))
             l.add_value('html', block.text)
             yield l.load_item()
         # save search_tag
@@ -283,7 +315,7 @@ class VitrinaSpider(scrapy.Spider):
             l = ItemLoader(item=SearchTagItem(), response=response)
             l.add_value('url', url)
             l.add_value('title', title)
-            l.add_value('page', self.get_uri(response.url))
+            l.add_value('page', self.get_uri(requested_url))
             l.add_value('html', block.text)
             yield l.load_item()
             link = ''.join([self.base_url, url])
@@ -300,7 +332,7 @@ class VitrinaSpider(scrapy.Spider):
             l = ItemLoader(item=CategoryTagItem(), response=response)
             l.add_value('url', url)
             l.add_value('title', title)
-            l.add_value('page', self.get_uri(response.url))
+            l.add_value('page', self.get_uri(requested_url))
             l.add_value('html', block.text)
             yield l.load_item()
             link = ''.join([self.base_url, url])
@@ -327,7 +359,7 @@ class VitrinaSpider(scrapy.Spider):
             yield request
         #save product cards
         card_blocks = response.css('div[class="products-list"] div.p-card').extract()
-        self.logger.info('parse_sub_category3: url: {url}; {count} products fetched'.format(url=response.url, count=len(card_blocks)))
+        self.logger.info('parse_sub_category3: url: {url}; {count} products fetched'.format(url=requested_url, count=len(card_blocks)))
         if len(card_blocks) == 0:
             message = ''.join(response.css('div[class="cat-text-null"] b').xpath('text()').extract())
             if len(response.text) < 200:
@@ -351,14 +383,14 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('title', title)
             l.add_value('price', price)
             l.add_value('product_id', id)
-            l.add_value('page', self.get_uri(response.url))
+            l.add_value('page', self.get_uri(requested_url))
             l.add_value('html', block.text)
             ymarket_link = ''.join(block.css('div[class="price-in-shops"] span').xpath('@data-link').extract())
             yield l.load_item()
             link = ''.join([self.base_url, url])
-            request = self.getRequest(link, self.parse_product_page, dont_filter=True, request_type=self.product_page_request_type)
+            request = self.getRequest(link, self.parse_product_page, dont_filter=True, request_type=self.product_request_type)
             request.meta['parent'] = url
-            request.meta['category'] = self.get_uri(response.url)
+            request.meta['category'] = self.get_uri(requested_url)
             request.meta['ymarket_link'] = ymarket_link
             yield request
             if img.startswith('//') or (not img.startswith('https:')):
@@ -375,6 +407,8 @@ class VitrinaSpider(scrapy.Spider):
         self.handle_pagination(response, self.parse_sub_category3, len(card_blocks))
 
     def parse_product_page(self, response):
+        #pprint(response.text)
+        requested_url = self.get_request_url(response)
         title = ' '.join(response.css('div[class="product-page"] div[class="p-info"] h1').xpath('text()').extract())
         description = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="desc"] p[class="d-text"]').xpath('text()').extract())
         try:
@@ -383,23 +417,21 @@ class VitrinaSpider(scrapy.Spider):
             price = None
         shop_link = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="btn-box"] a[class="btn btn-in-shops"]').xpath('@href').extract())
         shop_link2 = ' '.join(response.css('div[class="product_tabs"] section[id="content1"] a').xpath('@href').extract())
-        parameters = ' '.join(
-            response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
-        feedbacks = '##@@@!!!'.join(
-            response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
-        product_id = response.url.split('/').pop()
         categories = response.css('div[class="b-top"] li[class="breadcrumbs-item"] a').xpath('@href').extract()
         l = ItemLoader(item=ProductItem(), response=response)
+        product_id = requested_url.split('/').pop()
         l.add_value('product_id', product_id)
         l.add_value('html', response.text)
-        l.add_value('url', response.url)
+        l.add_value('url', requested_url)
         l.add_value('title', title)
         l.add_value('description', description)
         l.add_value('price', price)
         l.add_value('shop_link', shop_link)
         if 'ymarket_link' in response.meta and len(response.meta['ymarket_link']) > 0:
             l.add_value('shop_link2', response.meta['ymarket_link'])
+        parameters = self.parse_parameters(response)
         l.add_value('parameters', parameters)
+        feedbacks = self.parse_feedbacks(response)
         l.add_value('feedbacks', feedbacks)
         if len(categories) > 0:
             for category in categories:
@@ -439,7 +471,8 @@ class VitrinaSpider(scrapy.Spider):
         return url.replace(self.base_url, '').split('?')[0]
 
     def handle_pagination(self, response, callback, default_count=72):
-        self.logger.info('handle pagination from url: {url}'.format(url=response.url))
+        requested_url = self.get_request_url(response)
+        self.logger.info('handle pagination from url: {url}'.format(url=requested_url))
         try:
             count = int(''.join(
                 response.css('div[class="p-title__wrap"] h1[class="p-title"] + span[class="p-title__text"]').xpath(
@@ -451,7 +484,7 @@ class VitrinaSpider(scrapy.Spider):
         self.logger.info('handle pagination: count={count}'.format(count=count))
         count_pages = math.ceil(count / 72.0)
         self.logger.info('handle pagination: count_pages={count_pages}'.format(count_pages=count_pages))
-        category_uri = self.get_uri(response.url)
+        category_uri = self.get_uri(requested_url)
         if count_pages > 1:
             if category_uri not in self.pagination:
                 page = 2
@@ -466,6 +499,35 @@ class VitrinaSpider(scrapy.Spider):
             request = self.getRequest(url, callback=callback)
             request.meta['parent'] = response.meta['parent']
             return request
+
+    def parse_parameters(self, response):
+        parameters_html = ' '.join(response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
+        body = parameters_html
+        block = response.replace(body=body.encode('utf-8'))
+        params = block.xpath(u'//article/header/following-sibling::div[1]').xpath(u'//div[@data-tid]/span/text()').extract()
+        data = {}
+        for i in range(0, len(params), 2):
+            data[params[i]] = params[i+1]
+        return json.dumps(data)
+
+    def parse_feedbacks(self, response):
+        feedbacks_html = ' '.join(response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
+        body = feedbacks_html.encode('utf-8')
+        block = response.replace(body=body)
+        fb_blocks = block.xpath(u'//div[text() = "Отзывы"]/following-sibling::div[1]/div').extract()
+        data = []
+        for fb_block in fb_blocks:
+            item = {}
+            fb_response = response.replace(body=fb_block.encode('utf-8'))
+            item['name'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[1]/span').xpath('text()').extract())
+            item['eval'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[2]/div/div').xpath('text()').extract())
+            item['opinion'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[2]/span[1]').xpath('text()').extract())
+            item['experience'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[2]/span[2]').xpath('text()').extract())
+            item['plus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Достоинства']/following-sibling::p[1]").xpath('text()').extract())
+            item['minus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Недостатки']/following-sibling::p[1]").xpath('text()').extract())
+            item['comment'] = ' '.join(fb_response.xpath(u"//span[text() = 'Комментарий']/following-sibling::p[1]").xpath('text()').extract())
+            data.append(item)
+        return json.dumps(data)
 
 
 

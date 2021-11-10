@@ -26,6 +26,8 @@ from yavitrina.items import TagItem
 from yavitrina.items import ProductCardItem
 from yavitrina.items import ProductItem
 from yavitrina.items import ImageItem
+from yavitrina.items import SearchTagItem
+from yavitrina.items import CategoryTagItem
 from scrapy.exceptions import CloseSpider
 from yavitrina.config import load_config
 from yavitrina.extensions import PgSQLStore
@@ -63,6 +65,7 @@ class YavitrinaPipeline(object):
     files = {}
     feed_name = ''
     config = None
+    spider = None
 
     def __init__(self):
         self.files = {}
@@ -84,7 +87,10 @@ class YavitrinaPipeline(object):
 
     def spider_opened(self, spider):
         #self.exporter = YavitrinaFileExporter(spider)
+        self.spider = spider
         self.exporter = YavitrinaPgSqlExporter(spider, self.config)
+        SCRAPESTACK_ACCESS_KEY = self.config['SCRAPESTACK']['ACCESS_KEY']
+        self.spider.scrapestack_access_key = SCRAPESTACK_ACCESS_KEY
         self.exporter.start_exporting()
 
 
@@ -107,7 +113,7 @@ class YavitrinaFileExporter(object):
 
     spider = None
     dirname = None
-    sub_folders = {'categories': None, 'images': None, 'products': None, 'tags': None, 'product_card': None, 'images_files': None}
+    sub_folders = {'categories': None, 'images': None, 'products': None, 'tags': None, 'product_card': None, 'images_files': None, 'search_tags': None, 'category_tags': None}
 
     def __init__(self, spider, **kwargs):
         super(self.__class__, self).__init__()
@@ -172,6 +178,8 @@ class YavitrinaFileExporter(object):
         with open(filename, 'wb') as f:
             f.write(json.dumps(data, sort_keys=True, indent=4))
 
+
+
     def save_product_card_item(self, item):
         data = {}
         for key, val in item.items():
@@ -219,6 +227,7 @@ class YavitrinaFileExporter(object):
             f2.write(json.dumps(data, sort_keys=True, indent=4))
 
 
+
 class YavitrinaPgSqlExporter(object):
 
     spider = None
@@ -232,6 +241,8 @@ class YavitrinaPgSqlExporter(object):
         'image': {'parsed': 0, 'inserted': 0},
         'product_card': {'parsed': 0, 'inserted': 0},
         'product': {'parsed': 0, 'inserted': 0},
+        'search_tag': {'parsed': 0, 'inserted': 0},
+        'category_tag': {'parsed': 0, 'inserted': 0},
     }
 
     def __init__(self, spider, config, **kwargs):
@@ -289,6 +300,12 @@ class YavitrinaPgSqlExporter(object):
             #pprint(item)
             entity = 'image'
             res = self.save_image_item(item)
+        elif isinstance(item, SearchTagItem):
+            logging.info('saving search tag item')
+            self.save_search_tag_item(item)
+        elif isinstance(item, CategoryTagItem):
+            logging.info('saving category tag item')
+            self.save_category_tag_item(item)
         if entity is not None:
             self.stat[entity]['parsed'] += 1
         if res is not None:
@@ -358,6 +375,30 @@ class YavitrinaPgSqlExporter(object):
                 data[key] = val
         data['path'] = filename
         self.db.save_image(data)
+
+    def save_search_tag_item(self, item):
+        data = {}
+        mapping = {}
+        for key, val in item.items():
+            if key in mapping:
+                key = mapping[key]
+            if type(val) is list:
+                data[key] = u','.join(map(lambda i: unicode(i), val))
+            else:
+                data[key] = val
+        self.db.save_search_tag(data)
+
+    def save_category_tag_item(self, item):
+        data = {}
+        mapping = {}
+        for key, val in item.items():
+            if key in mapping:
+                key = mapping[key]
+            if type(val) is list:
+                data[key] = u','.join(map(lambda i: unicode(i), val))
+            else:
+                data[key] = val
+        self.db.save_category_tag(data)
 
 
 

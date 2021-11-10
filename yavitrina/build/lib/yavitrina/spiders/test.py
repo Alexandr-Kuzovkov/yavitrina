@@ -20,6 +20,10 @@ from yavitrina.items import TagItem
 from yavitrina.items import ProductCardItem
 from yavitrina.items import ProductItem
 from yavitrina.items import ImageItem
+from yavitrina.scrapestack import ScrapestackRequest
+from yavitrina.seleniumrequest import SelenuimRequest
+from scrapy_headless import HeadlessRequest
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 
 class TestSpider(scrapy.Spider):
@@ -37,6 +41,17 @@ class TestSpider(scrapy.Spider):
     es_exporter = None
     base_url = 'https://yavitrina.ru'
     lua_src = pkgutil.get_data('yavitrina', 'lua/html-render.lua')
+    scrapestack_access_key = ''
+
+    custom_settings = {
+        'SELENIUM_GRID_URL': 'http://selenium-hub:4444/wd/hub',  # Example for local grid with docker-compose
+        'SELENIUM_NODES': 1,  # Number of nodes(browsers) you are running on your grid
+        'SELENIUM_CAPABILITIES': DesiredCapabilities.CHROME,
+        'DOWNLOAD_HANDLERS': {
+            "http": "scrapy_headless.HeadlessDownloadHandler",
+            "https": "scrapy_headless.HeadlessDownloadHandler",
+        }
+    }
 
     def __init__(self, drain=False, noproxy=False, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
@@ -45,24 +60,48 @@ class TestSpider(scrapy.Spider):
         if noproxy:
             self.use_splash = False
 
-    def getRequest(self, url, callback, dont_filter=False):
-        if self.use_splash:
+    def getRequest(self, url, callback, request_type='splash', dont_filter=False):
+        if request_type == 'headless':
+            request = HeadlessRequest(url, callback=callback, driver_callback=self.process_webdriver)
+        elif request_type == 'selenium':
+            request = SelenuimRequest(url, callback=callback, dont_filter=dont_filter, options={'minsize': 2, 'wait': 2})
+        elif request_type == 'scrapestack':
+            request = ScrapestackRequest(url, callback=callback, access_key=self.scrapestack_access_key, dont_filter=dont_filter, options={'render_js': 1})
+        elif request_type == 'splash':
             args = {'wait': 10.0, 'lua_source': self.lua_src, 'timeout': 3600}
             request = SplashRequest(url, callback=callback, endpoint='execute', args=args, meta={"handle_httpstatus_all": True}, dont_filter=dont_filter)
         else:
             request = scrapy.Request(url, callback=callback, dont_filter=dont_filter)
         return request
 
+    def process_webdriver(self, driver):
+        IMPLICITLY_WAIT = 3
+        driver.implicitly_wait(IMPLICITLY_WAIT)
+        time.sleep(IMPLICITLY_WAIT)
+        #print(driver.page_source)
+
     def start_requests(self):
-        #url = 'https://yavitrina.ru/product/674779192'
+        url = 'https://yavitrina.ru/product/674779192'
+        url = 'https://yavitrina.ru/product/677731028'
+        url = 'https://yavitrina.ru/product/382715171'
+        url = 'https://yavitrina.ru/product/822105004'
+        #url = 'https://yavitrina.ru/product/14008662'
+        #url = 'https://hub.kuzovkov12.ru:8001/googleapi'
+        #DOCKER_HOST_IP = os.popen("ip ro | grep default | cut -d' ' -f 3").read().strip()
+        #url = 'http://{DOCKER_HOST_IP}:8002/googleapi'.format(DOCKER_HOST_IP=DOCKER_HOST_IP)
+        #request = self.getRequest(url, self.parse_product_page, request_type='scrapestack')
+        #request = self.getRequest(url, self.parse_product_page, request_type='selenium')
+        request = self.getRequest(url, self.parse_product_page, request_type='headless')
+
         #request = self.getRequest(url, self.parse_product_page)
-        url = 'https://yavitrina.ru/shampuni'
+        #url = 'https://yavitrina.ru/shampuni'
         #url = 'https://yavitrina.ru/verhnyaya-odezhda-dlya-malyshey'
-        request = self.getRequest(url, self.parse_sub_category3)
+        #request = self.getRequest(url, self.parse_sub_category3)
         request.meta['parent'] = url
         yield request
 
     def parse_product_page(self, response):
+        #pprint(response.text)
         title = ' '.join(response.css('div[class="product-page"] div[class="p-info"] h1').xpath('text()').extract())
         description = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="desc"] p[class="d-text"]').xpath('text()').extract())
         try:
@@ -71,22 +110,24 @@ class TestSpider(scrapy.Spider):
             price = None
         shop_link = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="btn-box"] a[class="btn btn-in-shops"]').xpath('@href').extract())
         shop_link2 = ' '.join(response.css('div[class="product_tabs"] section[id="content1"] a').xpath('@href').extract())
-        parameters = response.css('div[class="product_tabs"] section[id="content2"] article span').xpath('text()').extract()
-        feedbacks = '##@@@!!!'.join(response.css('div[class="product_tabs"] section[id="content3"] article div[class="_1qMiEXz _17VRAZ_"]').extract())
-        product_id = response.url.split('/').pop()
         categories = response.css('div[class="b-top"] li[class="breadcrumbs-item"] a').xpath('@href').extract()
         l = ItemLoader(item=ProductItem(), response=response)
+        url = response.request.url
+        if hasattr(response.request, 'url_origin'):
+            url = response.request.url_origin
+        product_id = url.split('/').pop()
         l.add_value('product_id', product_id)
-        #l.add_value('html', response.text)
-        l.add_value('html', 'product html here')
-        l.add_value('url', response.url)
+        l.add_value('html', response.text)
+        l.add_value('url', url)
         l.add_value('title', title)
         l.add_value('description', description)
         l.add_value('price', price)
         l.add_value('shop_link', shop_link)
         if 'ymarket_link' in response.meta and len(response.meta['ymarket_link']) > 0:
             l.add_value('shop_link2', response.meta['ymarket_link'])
+        parameters = self.parse_parameters(response)
         l.add_value('parameters', parameters)
+        feedbacks = self.parse_feedbacks(response)
         l.add_value('feedbacks', feedbacks)
         if len(categories) > 0:
             for category in categories:
@@ -98,6 +139,8 @@ class TestSpider(scrapy.Spider):
         #save images
         image_urls = response.css('div[class="photos"] img').xpath('@src').extract()
         for link in image_urls:
+            if link.startswith('//') or (not link.startswith('https:')):
+                link = 'https:{img}'.format(img=link)
             request = scrapy.Request(link, self.download_image)
             request.meta['product_id'] = product_id
             request.meta['filename'] = '-'.join(link.split('/')[-3:])
@@ -241,6 +284,35 @@ class TestSpider(scrapy.Spider):
             request = self.getRequest(url, callback=callback)
             request.meta['parent'] = response.meta['parent']
             return request
+
+    def parse_parameters(self, response):
+        parameters_html = ' '.join(response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
+        body = parameters_html
+        block = response.replace(body=body.encode('utf-8'))
+        params = block.xpath(u'//article/header/following-sibling::div[1]').xpath(u'//div[@data-tid]/span/text()').extract()
+        data = {}
+        for i in range(0, len(params), 2):
+            data[params[i]] = params[i+1]
+        return json.dumps(data)
+
+    def parse_feedbacks(self, response):
+        feedbacks_html = ' '.join(response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
+        body = feedbacks_html.encode('utf-8')
+        block = response.replace(body=body)
+        fb_blocks = block.xpath(u'//div[text() = "Отзывы"]/following-sibling::div[1]/div').extract()
+        data = []
+        for fb_block in fb_blocks:
+            item = {}
+            fb_response = response.replace(body=fb_block.encode('utf-8'))
+            item['name'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[1]/span').xpath('text()').extract())
+            item['eval'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[2]/div/div').xpath('text()').extract())
+            item['opinion'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[2]/span[1]').xpath('text()').extract())
+            item['experience'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[2]/span[2]').xpath('text()').extract())
+            item['plus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Достоинства']/following-sibling::p[1]").xpath('text()').extract())
+            item['minus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Недостатки']/following-sibling::p[1]").xpath('text()').extract())
+            item['comment'] = ' '.join(fb_response.xpath(u"//span[text() = 'Комментарий']/following-sibling::p[1]").xpath('text()').extract())
+            data.append(item)
+        return json.dumps(data)
 
 
 

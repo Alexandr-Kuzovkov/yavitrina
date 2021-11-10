@@ -22,11 +22,11 @@ RUN apt-get install -y wget
 RUN apt-get install -y wmctrl
 
 # Install Chrome.
-COPY ./bin/google-chrome-stable_86.0.4240.183-1_amd64.deb /tmp/google-chrome-stable.deb
+COPY ./bin/google-chrome-stable_95.0.4638.69-1_amd64.deb /tmp/google-chrome-stable.deb
 RUN apt-get update && apt-get install -y /tmp/google-chrome-stable.deb \
   && rm /tmp/google-chrome-stable.deb
 
-
+RUN apt-get install apt-transport-https ca-certificates
 #install python, seleneum, firefox, etc
 RUN apt-get update && apt-get install -y \
     python python-pip curl unzip libgconf-2-4
