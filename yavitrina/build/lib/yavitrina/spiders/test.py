@@ -24,6 +24,7 @@ from yavitrina.scrapestack import ScrapestackRequest
 from yavitrina.seleniumrequest import SelenuimRequest
 from scrapy_headless import HeadlessRequest
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from urllib import urlencode
 
 
 class TestSpider(scrapy.Spider):
@@ -60,18 +61,26 @@ class TestSpider(scrapy.Spider):
         if noproxy:
             self.use_splash = False
 
-    def getRequest(self, url, callback, request_type='splash', dont_filter=False):
+    def getRequest(self, url, callback, request_type='splash', dont_filter=False, use_scrapestack=False):
+        url_origin = url
+        if use_scrapestack:
+            params = {'access_key': self.scrapestack_access_key, 'url': url}
+            url = 'http://api.scrapestack.com/scrape?' + urlencode(params)
         if request_type == 'headless':
             request = HeadlessRequest(url, callback=callback, driver_callback=self.process_webdriver)
         elif request_type == 'selenium':
             request = SelenuimRequest(url, callback=callback, dont_filter=dont_filter, options={'minsize': 2, 'wait': 2})
         elif request_type == 'scrapestack':
+            url = url_origin
             request = ScrapestackRequest(url, callback=callback, access_key=self.scrapestack_access_key, dont_filter=dont_filter, options={'render_js': 1})
         elif request_type == 'splash':
             args = {'wait': 10.0, 'lua_source': self.lua_src, 'timeout': 3600}
             request = SplashRequest(url, callback=callback, endpoint='execute', args=args, meta={"handle_httpstatus_all": True}, dont_filter=dont_filter)
+            request.meta['url_origin'] = url_origin
         else:
             request = scrapy.Request(url, callback=callback, dont_filter=dont_filter)
+        if use_scrapestack:
+            request.meta['url_origin'] = url_origin
         return request
 
     def process_webdriver(self, driver):
@@ -90,8 +99,10 @@ class TestSpider(scrapy.Spider):
         #DOCKER_HOST_IP = os.popen("ip ro | grep default | cut -d' ' -f 3").read().strip()
         #url = 'http://{DOCKER_HOST_IP}:8002/googleapi'.format(DOCKER_HOST_IP=DOCKER_HOST_IP)
         #request = self.getRequest(url, self.parse_product_page, request_type='scrapestack')
-        #request = self.getRequest(url, self.parse_product_page, request_type='selenium')
-        request = self.getRequest(url, self.parse_product_page, request_type='headless')
+        #request = self.getRequest(url, self.parse_product_page, request_type='selenium', use_scrapestack=False)
+        request = self.getRequest(url, self.parse_product_page, request_type='headless', use_scrapestack=False)
+        #request = self.getRequest(url, self.parse_product_page, request_type='splash', use_scrapestack=False)
+        #request = self.getRequest(url, self.parse_product_page, request_type='origin', use_scrapestack=True)
 
         #request = self.getRequest(url, self.parse_product_page)
         #url = 'https://yavitrina.ru/shampuni'
@@ -102,6 +113,7 @@ class TestSpider(scrapy.Spider):
 
     def parse_product_page(self, response):
         #pprint(response.text)
+        requested_url = self.get_request_url(response)
         title = ' '.join(response.css('div[class="product-page"] div[class="p-info"] h1').xpath('text()').extract())
         description = ' '.join(response.css('div[class="product-page"] div[class="p-info"] div[class="desc"] p[class="d-text"]').xpath('text()').extract())
         try:
@@ -112,13 +124,11 @@ class TestSpider(scrapy.Spider):
         shop_link2 = ' '.join(response.css('div[class="product_tabs"] section[id="content1"] a').xpath('@href').extract())
         categories = response.css('div[class="b-top"] li[class="breadcrumbs-item"] a').xpath('@href').extract()
         l = ItemLoader(item=ProductItem(), response=response)
-        url = response.request.url
-        if hasattr(response.request, 'url_origin'):
-            url = response.request.url_origin
-        product_id = url.split('/').pop()
+        product_id = requested_url.split('/').pop()
         l.add_value('product_id', product_id)
         l.add_value('html', response.text)
-        l.add_value('url', url)
+        #l.add_value('url', url)
+        l.add_value('url', requested_url)
         l.add_value('title', title)
         l.add_value('description', description)
         l.add_value('price', price)
@@ -255,6 +265,14 @@ class TestSpider(scrapy.Spider):
 
     def get_uri(self, url):
         return url.replace(self.base_url, '').split('?')[0]
+
+    def get_request_url(self, response):
+        if 'url_origin' in response.meta:
+            return response.meta['url_origin']
+        elif hasattr(response.request, 'url_origin'):
+            return response.request.url_origin
+        else:
+            return response.request.url
 
     def handle_pagination(self, response, callback, default_count=72):
         self.logger.info('handle pagination from url: {url}'.format(url=response.url))
