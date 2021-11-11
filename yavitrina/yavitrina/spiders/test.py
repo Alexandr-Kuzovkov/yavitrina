@@ -93,15 +93,15 @@ class TestSpider(scrapy.Spider):
         url = 'https://yavitrina.ru/product/674779192'
         url = 'https://yavitrina.ru/product/677731028'
         url = 'https://yavitrina.ru/product/382715171'
-        url = 'https://yavitrina.ru/product/822105004'
-        #url = 'https://yavitrina.ru/product/14008662'
+        #url = 'https://yavitrina.ru/product/822105004'
+        url = 'https://yavitrina.ru/product/14008662'
         #url = 'https://hub.kuzovkov12.ru:8001/googleapi'
         #DOCKER_HOST_IP = os.popen("ip ro | grep default | cut -d' ' -f 3").read().strip()
         #url = 'http://{DOCKER_HOST_IP}:8002/googleapi'.format(DOCKER_HOST_IP=DOCKER_HOST_IP)
         #request = self.getRequest(url, self.parse_product_page, request_type='scrapestack')
-        #request = self.getRequest(url, self.parse_product_page, request_type='selenium', use_scrapestack=False)
+        #request = self.getRequest(url, self.parse_product_page, request_type='selenium', use_scrapestack=True)
         request = self.getRequest(url, self.parse_product_page, request_type='headless', use_scrapestack=False)
-        #request = self.getRequest(url, self.parse_product_page, request_type='splash', use_scrapestack=False)
+        #request = self.getRequest(url, self.parse_product_page, request_type='splash', use_scrapestack=True)
         #request = self.getRequest(url, self.parse_product_page, request_type='origin', use_scrapestack=True)
 
         #request = self.getRequest(url, self.parse_product_page)

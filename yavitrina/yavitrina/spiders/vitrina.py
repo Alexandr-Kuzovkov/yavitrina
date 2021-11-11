@@ -47,7 +47,7 @@ class VitrinaSpider(scrapy.Spider):
     paginations = {}
     scrapestack_access_key = ''
     product_request_type = 'headless'
-    request_type = 'headless'
+    request_type = 'splash'
     #product_request_type = 'selenium'
     use_scrapestack = True
     custom_settings = {
