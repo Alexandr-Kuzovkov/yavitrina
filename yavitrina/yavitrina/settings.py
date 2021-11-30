@@ -96,6 +96,7 @@ DOWNLOADER_MIDDLEWARES = {
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
     'yavitrina.pipelines.YavitrinaPipeline': 300,
+    'yavitrina.pipelines.DatabaseExporterPipeline': 310,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

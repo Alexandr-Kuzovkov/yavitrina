@@ -65,3 +65,8 @@ class ImageItem(scrapy.Item):
     category_url = scrapy.Field()
     data = scrapy.Field()
     filename = scrapy.Field()
+
+
+# db exporting items
+class SettingItem(scrapy.Item):
+    name = scrapy.Field()

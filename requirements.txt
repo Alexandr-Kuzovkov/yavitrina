@@ -35,5 +35,6 @@ langdetect
 elasticsearch
 datetime
 configparser
+mysql-connector
 
 
