@@ -14,6 +14,7 @@ import datetime
 import logging
 import urllib
 from yavitrina.items import CategoryItem
+from yavitrina.items import CategoryDescriptionItem
 from yavitrina.items import TagItem
 from yavitrina.items import ProductCardItem
 from yavitrina.items import ProductItem
@@ -127,11 +128,14 @@ class VitrinaSpider(scrapy.Spider):
             if len(img) == 0:
                 img = ' '.join(block.css('span[class="icon"]').extract())
                 img = img[img.find('xlink:href') + 12:img.find('</use>') - 2]
+            description = ' '.join(response.css('div[class="seo-text"] div[class="text"]').extract())
             l = ItemLoader(item=CategoryItem(), response=response)
             l.add_value('url', url)
             l.add_value('title', title)
             l.add_value('img', img)
             l.add_value('html', response.text)
+            if len(description) > 0:
+                l.add_value('description', description)
             yield l.load_item()
             link = ''.join([self.base_url, url])
             request = self.getRequest(link, self.parse_sub_category)
@@ -156,6 +160,7 @@ class VitrinaSpider(scrapy.Spider):
             url = ' '.join(block.css('div[class="holder"] a[class="name"]').xpath('@href').extract())
             title = ' '.join(block.css('div[class="holder"] a[class="name"]').xpath('text()').extract())
             img = ' '.join(block.css('span[class="icon"] img').xpath('@src').extract())
+            description = ' '.join(response.css('div[class="seo-text"] div[class="text"]').extract())
             parent = response.meta['parent']
             l = ItemLoader(item=CategoryItem(), response=response)
             l.add_value('url', url)
@@ -163,6 +168,8 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('img', img)
             l.add_value('parent', parent)
             l.add_value('html', response.text)
+            if len(description) > 0:
+                l.add_value('description', description)
             yield l.load_item()
             link = ''.join([self.base_url, url])
             request = self.getRequest(link, self.parse_sub_category2)
@@ -177,6 +184,13 @@ class VitrinaSpider(scrapy.Spider):
     # parse subcategory2 (ex. Каталог -> Одежда и обувь -> Обувь)
     def parse_sub_category2(self, response):
         requested_url = self.get_request_url(response)
+        #save  description for parent category
+        description = ' '.join(response.css('div[class="seo-text"] div[class="text"]').extract())
+        if len(description) > 0:
+            l = ItemLoader(item=CategoryDescriptionItem, response=response)
+            l.add_value('url', response.meta['parent'])
+            l.add_value('description', description)
+            yield l.load_item()
         # save tags
         tags_blocks = response.css('div[class="category-tags"] div a').extract()
         for html in tags_blocks:
@@ -262,6 +276,8 @@ class VitrinaSpider(scrapy.Spider):
             id = url.split('/').pop()
             title = ' '.join(block.css('div[class="name"] p[class="datalink clck gaclkname"]').xpath('text()').extract())
             price = int(' '.join(block.css('span[class="price"] strong[itemprop="price"]').xpath('text()').extract()).replace(' ', '').replace('.', '').encode('ascii','ignore'))
+            rate = ' '.join(block.css('div[class="reviews-info"] span[class="point"]').xpath('text()').extract())
+            colors = ','.join(map(lambda i: i.replace(u'border:1px solid #b6b6b6; background-color: ', ''), block.css('div.color-list span').xpath('@style').extract()))
             l = ItemLoader(item=ProductCardItem(), response=response)
             l.add_value('img', img)
             l.add_value('url', url)
@@ -277,6 +293,8 @@ class VitrinaSpider(scrapy.Spider):
             request.meta['parent'] = url
             request.meta['category'] = self.get_uri(requested_url)
             request.meta['ymarket_link'] = ymarket_link
+            request.meta['rate'] = rate
+            request.meta['colors'] = colors
             yield request
             if img.startswith('//') or (not img.startswith('https:')):
                 img = 'https:{img}'.format(img=img)
@@ -377,6 +395,8 @@ class VitrinaSpider(scrapy.Spider):
             id = url.split('/').pop()
             title = ' '.join(block.css('div[class="name"] p[class="datalink clck gaclkname"]').xpath('text()').extract())
             price = int(' '.join(block.css('span[class="price"] strong[itemprop="price"]').xpath('text()').extract()).replace(' ', '').replace('.', '').encode('ascii', 'ignore'))
+            rate = ' '.join(block.css('div[class="reviews-info"] span[class="point"]').xpath('text()').extract())
+            colors = ','.join(map(lambda i: i.replace(u'border:1px solid #b6b6b6; background-color: ', ''), block.css('div.color-list span').xpath('@style').extract()))
             l = ItemLoader(item=ProductCardItem(), response=response)
             l.add_value('img', img)
             l.add_value('url', url)
@@ -392,6 +412,8 @@ class VitrinaSpider(scrapy.Spider):
             request.meta['parent'] = url
             request.meta['category'] = self.get_uri(requested_url)
             request.meta['ymarket_link'] = ymarket_link
+            request.meta['rate'] = rate
+            request.meta['colors'] = colors
             yield request
             if img.startswith('//') or (not img.startswith('https:')):
                 img = 'https:{img}'.format(img=img)
@@ -429,6 +451,10 @@ class VitrinaSpider(scrapy.Spider):
         l.add_value('shop_link', shop_link)
         if 'ymarket_link' in response.meta and len(response.meta['ymarket_link']) > 0:
             l.add_value('shop_link2', response.meta['ymarket_link'])
+        if 'rate' in response.meta and len(response.meta['rate']) > 0:
+            l.add_value('rate', response.meta['rate'])
+        if 'colors' in response.meta and len(response.meta['colors']) > 0:
+            l.add_value('colors', response.meta['colors'])
         parameters = self.parse_parameters(response)
         l.add_value('parameters', parameters)
         feedbacks = self.parse_feedbacks(response)

@@ -303,6 +303,13 @@ class PgSQLStore(PgSQLBase):
             res = self._insert('category_tag', [data])
             return res
 
+    def save_category_description(self, data):
+        res = self._get('category', field_list=None, where='url=%s', data=[data['url']])
+        if len(res) > 0:
+            category = res[0]
+            self._update('category', {'description': data['description']}, {'id': category['id']})
+        return None
+
 
 
 class MySQLBase(object):

@@ -22,6 +22,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from yavitrina.items import CategoryItem
+from yavitrina.items import CategoryDescriptionItem
 from yavitrina.items import TagItem
 from yavitrina.items import ProductCardItem
 from yavitrina.items import ProductItem
@@ -85,7 +86,7 @@ class YavitrinaPipeline(object):
         crawler.signals.connect(pipeline.spider_opened, signals.spider_opened)
         crawler.signals.connect(pipeline.spider_closed, signals.spider_closed)
         self.stats = crawler.stats
-        if crawler.spider.name in ['vitrina', 'test']:
+        if crawler.spider is not None and crawler.spider.name in ['vitrina', 'test']:
             return pipeline
 
     def spider_opened(self, spider):
@@ -129,7 +130,7 @@ class DatabaseExporterPipeline(object):
         crawler.signals.connect(pipeline.spider_opened, signals.spider_opened)
         crawler.signals.connect(pipeline.spider_closed, signals.spider_closed)
         self.stats = crawler.stats
-        if crawler.spider.name in ['test2']:
+        if crawler.spider is not None and crawler.spider.name in ['test2']:
             return pipeline
 
     def spider_opened(self, spider):
@@ -344,6 +345,9 @@ class YavitrinaPgSqlExporter(object):
         elif isinstance(item, CategoryTagItem):
             logging.info('saving category tag item')
             self.save_category_tag_item(item)
+        elif isinstance(item, CategoryDescriptionItem):
+            logging.info('saving category description')
+            self.save_category_description(item)
         if entity is not None:
             self.stat[entity]['parsed'] += 1
         if res is not None:
@@ -437,6 +441,18 @@ class YavitrinaPgSqlExporter(object):
             else:
                 data[key] = val
         self.db.save_category_tag(data)
+
+    def save_category_description(self, item):
+        data = {}
+        mapping = {}
+        for key, val in item.items():
+            if key in mapping:
+                key = mapping[key]
+            if type(val) is list:
+                data[key] = u','.join(map(lambda i: unicode(i), val))
+            else:
+                data[key] = val
+        self.db.save_category_description(data)
 
 
 class YavitrinaDatabaseExporter(object):

@@ -14,7 +14,11 @@ class CategoryItem(scrapy.Item):
     img = scrapy.Field()
     parent = scrapy.Field()
     html = scrapy.Field()
+    description = scrapy.Field()
 
+class CategoryDescriptionItem(scrapy.Item):
+    url = scrapy.Field()
+    description = scrapy.Field()
 
 class TagItem(scrapy.Item):
     url = scrapy.Field()
@@ -57,6 +61,8 @@ class ProductItem(scrapy.Item):
     parameters = scrapy.Field()
     feedbacks = scrapy.Field()
     category = scrapy.Field()
+    rate = scrapy.Field()
+    colors = scrapy.Field()
 
 class ImageItem(scrapy.Item):
     url = scrapy.Field()
