@@ -465,6 +465,9 @@ class VitrinaSpider(scrapy.Spider):
                 break
         elif 'category' in response.meta:
             l.add_value('category', response.meta['category'])
+        related_products = ','.join(map(lambda i: i.split('/').pop(), response.css('div[class="related-products"] div[class="b-info-wrap"] a').xpath('@href').extract()))
+        if len(related_products) > 0:
+            l.add_value('related_products', related_products)
         yield l.load_item()
         #save images
         image_urls = response.css('div[class="photos"] img').xpath('@src').extract()

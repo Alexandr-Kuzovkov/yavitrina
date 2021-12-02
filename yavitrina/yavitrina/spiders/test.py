@@ -45,6 +45,7 @@ class TestSpider(scrapy.Spider):
     scrapestack_access_key = ''
 
     custom_settings = {
+        'LOG_LEVEL': 'DEBUG',
         'SELENIUM_GRID_URL': 'http://selenium-hub:4444/wd/hub',  # Example for local grid with docker-compose
         'SELENIUM_NODES': 1,  # Number of nodes(browsers) you are running on your grid
         'SELENIUM_CAPABILITIES': DesiredCapabilities.CHROME,
@@ -94,13 +95,14 @@ class TestSpider(scrapy.Spider):
         url = 'https://yavitrina.ru/product/677731028'
         url = 'https://yavitrina.ru/product/382715171'
         #url = 'https://yavitrina.ru/product/822105004'
-        url = 'https://yavitrina.ru/product/14008662'
+        #url = 'https://yavitrina.ru/product/14008662'
+        url = 'https://yavitrina.ru/zhenskaya-obuv'
         #url = 'https://hub.kuzovkov12.ru:8001/googleapi'
         #DOCKER_HOST_IP = os.popen("ip ro | grep default | cut -d' ' -f 3").read().strip()
         #url = 'http://{DOCKER_HOST_IP}:8002/googleapi'.format(DOCKER_HOST_IP=DOCKER_HOST_IP)
         #request = self.getRequest(url, self.parse_product_page, request_type='scrapestack')
         #request = self.getRequest(url, self.parse_product_page, request_type='selenium', use_scrapestack=True)
-        request = self.getRequest(url, self.parse_product_page, request_type='headless', use_scrapestack=False)
+        request = self.getRequest(url, self.parse_filters, request_type='origin', use_scrapestack=False)
         #request = self.getRequest(url, self.parse_product_page, request_type='splash', use_scrapestack=True)
         #request = self.getRequest(url, self.parse_product_page, request_type='origin', use_scrapestack=True)
 
@@ -331,6 +333,27 @@ class TestSpider(scrapy.Spider):
             item['comment'] = ' '.join(fb_response.xpath(u"//span[text() = 'Комментарий']/following-sibling::p[1]").xpath('text()').extract())
             data.append(item)
         return json.dumps(data)
+
+    def parse_filters(self, response):
+        self.logger.info('!!!PARSE FILTERS')
+        filters = {'url': None, 'settings': []}
+        url = ' '.join(response.css('form[id="filter-form"]').xpath('@action').extract())
+        filters['url'] = url
+        self.logger.debug('url={url}'.format(url=url))
+        filter_blocks = response.css('form[id="filter-form"] div[class="box active"]').extract()
+        for body in filter_blocks:
+            block = response.replace(body=body.encode('utf-8'))
+            setting = u' '.join(filter(lambda i: len(i) > 0, map(lambda i: i.strip(), block.css('div[class="heading"]').xpath('text()').extract())))
+            if len(setting) == 0:
+                continue
+            self.logger.debug(u'setting={setting}'.format(setting=setting))
+            setting_values = filter(lambda i: len(i)>0, map(lambda i: i.strip(), block.css('div[class="box-inner"] div[class="ya-checkbox"] label[class="ya-check-label"]').xpath('text()').extract()))
+            self.logger.debug('setting_values={setting_values}'.format(setting_values=setting_values))
+            filters['settings'].append({setting: setting_values})
+        self.logger.debug(u'filters={filters}'.format(filters=filters))
+
+
+
 
 
 

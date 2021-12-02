@@ -310,6 +310,12 @@ class PgSQLStore(PgSQLBase):
             self._update('category', {'description': data['description']}, {'id': category['id']})
         return None
 
+    def save_settings(self, data):
+        pass
+
+    def save_settings_value(self, data):
+        pass
+
 
 
 class MySQLBase(object):

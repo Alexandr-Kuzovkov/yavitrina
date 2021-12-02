@@ -30,6 +30,7 @@ from yavitrina.items import ImageItem
 from yavitrina.items import SearchTagItem
 from yavitrina.items import CategoryTagItem
 from yavitrina.items import SettingItem
+from yavitrina.items import SettingValueItem
 from scrapy.exceptions import CloseSpider
 from yavitrina.config import load_config
 from yavitrina.extensions import PgSQLStore
@@ -348,6 +349,12 @@ class YavitrinaPgSqlExporter(object):
         elif isinstance(item, CategoryDescriptionItem):
             logging.info('saving category description')
             self.save_category_description(item)
+        elif isinstance(item, SettingItem):
+            logging.info('saving setting item')
+            self.save_settings_item(item)
+        elif isinstance(item, SettingValueItem):
+            logging.info('saving setting_value item')
+            self.save_settings_value_item(item)
         if entity is not None:
             self.stat[entity]['parsed'] += 1
         if res is not None:
@@ -453,6 +460,31 @@ class YavitrinaPgSqlExporter(object):
             else:
                 data[key] = val
         self.db.save_category_description(data)
+
+    def save_settings_item(self, item):
+        data = {}
+        mapping = {}
+        for key, val in item.items():
+            if key in mapping:
+                key = mapping[key]
+            if type(val) is list:
+                data[key] = u','.join(map(lambda i: unicode(i), val))
+            else:
+                data[key] = val
+        self.db.save_settings(data)
+
+    def save_settings_value_item(self, item):
+        data = {}
+        mapping = {}
+        for key, val in item.items():
+            if key in mapping:
+                key = mapping[key]
+            if type(val) is list:
+                data[key] = u','.join(map(lambda i: unicode(i), val))
+            else:
+                data[key] = val
+        self.db.save_settings_value(data)
+
 
 
 class YavitrinaDatabaseExporter(object):

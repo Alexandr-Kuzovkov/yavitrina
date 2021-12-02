@@ -63,6 +63,7 @@ class ProductItem(scrapy.Item):
     category = scrapy.Field()
     rate = scrapy.Field()
     colors = scrapy.Field()
+    related_products = scrapy.Field()
 
 class ImageItem(scrapy.Item):
     url = scrapy.Field()
@@ -72,7 +73,10 @@ class ImageItem(scrapy.Item):
     data = scrapy.Field()
     filename = scrapy.Field()
 
-
-# db exporting items
 class SettingItem(scrapy.Item):
     name = scrapy.Field()
+    url = scrapy.Field()
+
+class SettingValueItem(scrapy.Item):
+    settings_name = scrapy.Field()
+    value = scrapy.Field()
