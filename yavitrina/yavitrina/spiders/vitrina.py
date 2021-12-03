@@ -205,7 +205,7 @@ class VitrinaSpider(scrapy.Spider):
                         yield l.load_item()
                         for setting_value in setting_values:
                             l = ItemLoader(item=SettingValueItem(), response=response)
-                            l.add_value('settings_name', setting)
+                            l.add_value('settings_name', setting_name)
                             l.add_value('value', setting_value)
                             yield l.load_item()
         # save tags
@@ -346,7 +346,7 @@ class VitrinaSpider(scrapy.Spider):
                         yield l.load_item()
                         for setting_value in setting_values:
                             l = ItemLoader(item=SettingValueItem(), response=response)
-                            l.add_value('settings_name', setting)
+                            l.add_value('settings_name', setting_name)
                             l.add_value('value', setting_value)
                             yield l.load_item()
         # save tags
