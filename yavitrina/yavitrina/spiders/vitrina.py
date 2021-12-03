@@ -21,6 +21,8 @@ from yavitrina.items import ProductItem
 from yavitrina.items import ImageItem
 from yavitrina.items import SearchTagItem
 from yavitrina.items import CategoryTagItem
+from yavitrina.items import SettingItem
+from yavitrina.items import SettingValueItem
 from yavitrina.scrapestack import ScrapestackRequest
 from yavitrina.seleniumrequest import SelenuimRequest
 from scrapy_headless import HeadlessRequest
@@ -187,10 +189,25 @@ class VitrinaSpider(scrapy.Spider):
         #save  description for parent category
         description = ' '.join(response.css('div[class="seo-text"] div[class="text"]').extract())
         if len(description) > 0:
-            l = ItemLoader(item=CategoryDescriptionItem, response=response)
+            l = ItemLoader(item=CategoryDescriptionItem(), response=response)
             l.add_value('url', response.meta['parent'])
             l.add_value('description', description)
             yield l.load_item()
+        #save filters
+        filters = self.parse_filters(response)
+        if filters['url'] is not None and len(filters['settings']) > 0:
+            for setting in filters['settings']:
+                if type(setting) is dict:
+                    for setting_name, setting_values in setting.items():
+                        l = ItemLoader(item=SettingItem(), response=response)
+                        l.add_value('url', filters['url'])
+                        l.add_value('name', setting_name)
+                        yield l.load_item()
+                        for setting_value in setting_values:
+                            l = ItemLoader(item=SettingValueItem(), response=response)
+                            l.add_value('settings_name', setting)
+                            l.add_value('value', setting_value)
+                            yield l.load_item()
         # save tags
         tags_blocks = response.css('div[class="category-tags"] div a').extract()
         for html in tags_blocks:
@@ -310,6 +327,28 @@ class VitrinaSpider(scrapy.Spider):
     # parse subcategory3 (ex. Каталог -> Одежда и обувь -> Обувь -> Сандалии)
     def parse_sub_category3(self, response):
         requested_url = self.get_request_url(response)
+        # save  description for parent category
+        description = ' '.join(response.css('div[class="seo-text"] div[class="text"]').extract())
+        if len(description) > 0:
+            l = ItemLoader(item=CategoryDescriptionItem(), response=response)
+            l.add_value('url', response.meta['parent'])
+            l.add_value('description', description)
+            yield l.load_item()
+        # save filters
+        filters = self.parse_filters(response)
+        if filters['url'] is not None and len(filters['settings']) > 0:
+            for setting in filters['settings']:
+                if type(setting) is dict:
+                    for setting_name, setting_values in setting.items():
+                        l = ItemLoader(item=SettingItem(), response=response)
+                        l.add_value('url', filters['url'])
+                        l.add_value('name', setting_name)
+                        yield l.load_item()
+                        for setting_value in setting_values:
+                            l = ItemLoader(item=SettingValueItem(), response=response)
+                            l.add_value('settings_name', setting)
+                            l.add_value('value', setting_value)
+                            yield l.load_item()
         # save tags
         tags_blocks = response.css('div[class="category-tags"] div a').extract()
         for html in tags_blocks:
@@ -557,6 +596,27 @@ class VitrinaSpider(scrapy.Spider):
             item['comment'] = ' '.join(fb_response.xpath(u"//span[text() = 'Комментарий']/following-sibling::p[1]").xpath('text()').extract())
             data.append(item)
         return json.dumps(data)
+
+    def parse_filters(self, response):
+        self.logger.info('!!!PARSE FILTERS')
+        filters = {'url': None, 'settings': []}
+        url = ' '.join(response.css('form[id="filter-form"]').xpath('@action').extract())
+        filters['url'] = url
+        self.logger.debug('url={url}'.format(url=url))
+        filter_blocks = response.css('form[id="filter-form"] div[class="box active"]').extract()
+        for body in filter_blocks:
+            block = response.replace(body=body.encode('utf-8'))
+            setting = u' '.join(filter(lambda i: len(i) > 0, map(lambda i: i.strip(), block.css('div[class="heading"]').xpath('text()').extract())))
+            if len(setting) == 0:
+                continue
+            self.logger.debug(u'setting={setting}'.format(setting=setting))
+            setting_values = filter(lambda i: len(i)>0, map(lambda i: i.strip(), block.css('div[class="box-inner"] div[class="ya-checkbox"] label[class="ya-check-label"]').xpath('text()').extract()))
+            self.logger.debug('setting_values={setting_values}'.format(setting_values=setting_values))
+            filters['settings'].append({setting: setting_values})
+        self.logger.debug(u'filters={filters}'.format(filters=filters))
+        return filters
+
+
 
 
 

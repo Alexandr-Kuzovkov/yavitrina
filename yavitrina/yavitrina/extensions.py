@@ -311,10 +311,16 @@ class PgSQLStore(PgSQLBase):
         return None
 
     def save_settings(self, data):
-        pass
+        res = self._get('settings', field_list=None, where='url=%s AND name=%s', data=[data['url'], data['name']])
+        if len(res) == 0:
+            self._insert('settings', data)
+            return None
 
     def save_settings_value(self, data):
-        pass
+        res = self._get('settings_value', field_list=None, where='settings_name=%s AND value=%s', data=[data['settings_name'], data['value']])
+        if len(res) == 0:
+            self._insert('settings', data)
+            return None
 
 
 

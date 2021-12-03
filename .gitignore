@@ -59,3 +59,5 @@ fibois/build/
 fibois/project.egg-info/
 fibois/files
 yavitrina/files
+docker/db/dumps/*
+docker/mysql/dumps/*
