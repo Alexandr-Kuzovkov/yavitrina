@@ -20,6 +20,8 @@ from yavitrina.items import TagItem
 from yavitrina.items import ProductCardItem
 from yavitrina.items import ProductItem
 from yavitrina.items import ImageItem
+from yavitrina.items import SettingItem
+from yavitrina.items import SettingValueItem
 from yavitrina.scrapestack import ScrapestackRequest
 from yavitrina.seleniumrequest import SelenuimRequest
 from scrapy_headless import HeadlessRequest
@@ -102,7 +104,7 @@ class TestSpider(scrapy.Spider):
         #url = 'http://{DOCKER_HOST_IP}:8002/googleapi'.format(DOCKER_HOST_IP=DOCKER_HOST_IP)
         #request = self.getRequest(url, self.parse_product_page, request_type='scrapestack')
         #request = self.getRequest(url, self.parse_product_page, request_type='selenium', use_scrapestack=True)
-        request = self.getRequest(url, self.parse_filters, request_type='origin', use_scrapestack=False)
+        request = self.getRequest(url, self.test_saving_filters, request_type='origin', use_scrapestack=False)
         #request = self.getRequest(url, self.parse_product_page, request_type='splash', use_scrapestack=True)
         #request = self.getRequest(url, self.parse_product_page, request_type='origin', use_scrapestack=True)
 
@@ -351,6 +353,25 @@ class TestSpider(scrapy.Spider):
             self.logger.debug('setting_values={setting_values}'.format(setting_values=setting_values))
             filters['settings'].append({setting: setting_values})
         self.logger.debug(u'filters={filters}'.format(filters=filters))
+        return filters
+
+    def test_saving_filters(self, response):
+        # save filters
+        filters = self.parse_filters(response)
+        if filters['url'] is not None and len(filters['settings']) > 0:
+            for setting in filters['settings']:
+                if type(setting) is dict:
+                    for setting_name, setting_values in setting.items():
+                        l = ItemLoader(item=SettingItem(), response=response)
+                        l.add_value('url', filters['url'])
+                        l.add_value('name', setting_name)
+                        yield l.load_item()
+                        for setting_value in setting_values:
+                            l = ItemLoader(item=SettingValueItem(), response=response)
+                            l.add_value('settings_name', setting_name)
+                            l.add_value('value', setting_value)
+                            l.add_value('url', filters['url'])
+                            yield l.load_item()
 
 
 

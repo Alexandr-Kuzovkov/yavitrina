@@ -26,7 +26,8 @@ def upgrade():
 
     op.execute('''CREATE TABLE IF NOT EXISTS settings_value (
                   id serial not null constraint settings_value_pk primary key,
-                  settings_name BIGINT NOT NULL,
+                  settings_name VARCHAR(255) NOT NULL,
+                  url VARCHAR(255) NOT NULL,
                   "value" VARCHAR (255) NOT NULL)''')
 
 

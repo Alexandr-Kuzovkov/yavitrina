@@ -193,7 +193,7 @@ class VitrinaSpider(scrapy.Spider):
             l.add_value('url', response.meta['parent'])
             l.add_value('description', description)
             yield l.load_item()
-        #save filters
+        # save filters
         filters = self.parse_filters(response)
         if filters['url'] is not None and len(filters['settings']) > 0:
             for setting in filters['settings']:
@@ -207,6 +207,7 @@ class VitrinaSpider(scrapy.Spider):
                             l = ItemLoader(item=SettingValueItem(), response=response)
                             l.add_value('settings_name', setting_name)
                             l.add_value('value', setting_value)
+                            l.add_value('url', filters['url'])
                             yield l.load_item()
         # save tags
         tags_blocks = response.css('div[class="category-tags"] div a').extract()
@@ -348,6 +349,7 @@ class VitrinaSpider(scrapy.Spider):
                             l = ItemLoader(item=SettingValueItem(), response=response)
                             l.add_value('settings_name', setting_name)
                             l.add_value('value', setting_value)
+                            l.add_value('url', filters['url'])
                             yield l.load_item()
         # save tags
         tags_blocks = response.css('div[class="category-tags"] div a').extract()

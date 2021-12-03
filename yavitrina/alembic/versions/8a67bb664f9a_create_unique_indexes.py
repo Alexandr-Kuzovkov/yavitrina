@@ -18,7 +18,7 @@ depends_on = None
 
 def upgrade():
     op.execute('CREATE UNIQUE INDEX uidx_settings_url_name on settings (url,"name")')
-    op.execute('CREATE UNIQUE INDEX uidx_settings_value_setting_name_value on settings_value (settings_name,"value")')
+    op.execute('CREATE UNIQUE INDEX uidx_settings_value_setting_name_value on settings_value (settings_name,"value",url)')
 
 
 def downgrade():

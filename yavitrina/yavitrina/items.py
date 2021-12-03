@@ -80,3 +80,4 @@ class SettingItem(scrapy.Item):
 class SettingValueItem(scrapy.Item):
     settings_name = scrapy.Field()
     value = scrapy.Field()
+    url = scrapy.Field()
