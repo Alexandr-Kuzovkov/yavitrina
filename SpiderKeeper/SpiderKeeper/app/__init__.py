@@ -83,6 +83,11 @@ from SpiderKeeper.app.spider.model import *
 def init_database():
     db.init_app(app)
     db.create_all()
+    option = Option.get_option('dont_run_duplicate')
+    if option is None:
+        option = Option(option_name='dont_run_duplicate', option_value=0,
+                        option_desc='Don\'t run the same spider with the same parameters already running')
+        Option.set_option(option)
 
 
 # regist spider service proxy

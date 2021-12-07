@@ -16,8 +16,9 @@ from werkzeug.utils import secure_filename
 from functools import wraps
 
 from SpiderKeeper.app import db, api, agent, app, config
-from SpiderKeeper.app.spider.model import JobInstance, Project, JobExecution, SpiderInstance, JobRunType
+from SpiderKeeper.app.spider.model import JobInstance, Project, JobExecution, SpiderInstance, JobRunType, Option
 from SpiderKeeper.app.vitrina.helper import get_dates, get_stat, get_count_for_date
+from SpiderKeeper.app.spider.helper import is_spider_duplicate, options_types
 from pprint import pprint
 api_spider_bp = Blueprint('spider', __name__)
 
@@ -567,7 +568,6 @@ def job_periodic(project_id):
     return render_template("job_periodic.html",
                            job_instance_list=job_instance_list, total=total)
 
-
 @app.route("/project/<project_id>/job/add", methods=['post'])
 def job_add(project_id):
     project = Project.find_project_by_id(project_id)
@@ -581,6 +581,10 @@ def job_add(project_id):
         job_instance.enabled = -1
         db.session.add(job_instance)
         db.session.commit()
+        #check duplicate
+        if is_spider_duplicate(job_instance):
+            print('!!!Prevent run duplicate of job!!!')
+            return redirect(request.referrer, code=302)
         agent.start_spider(job_instance)
     if job_instance.run_type == JobRunType.PERIODIC:
         job_instance.cron_minutes = request.form.get('cron_minutes') or '0'
@@ -591,7 +595,6 @@ def job_add(project_id):
         db.session.add(job_instance)
         db.session.commit()
     return redirect(request.referrer, code=302)
-
 
 @app.route("/project/<project_id>/jobexecs/<job_exec_id>/stop")
 def job_stop(project_id, job_exec_id):
@@ -633,10 +636,13 @@ def job_log_errors(project_id, job_exec_id):
     return 'File not found'
 
 
-
 @app.route("/project/<project_id>/job/<job_instance_id>/run")
 def job_run(project_id, job_instance_id):
     job_instance = JobInstance.query.filter_by(project_id=project_id, id=job_instance_id).first()
+    # check duplicate
+    if is_spider_duplicate(job_instance):
+        print('!!!Prevent run duplicate of job!!!')
+        return redirect(request.referrer, code=302)
     agent.start_spider(job_instance)
     return redirect(request.referrer, code=302)
 
@@ -715,84 +721,44 @@ def count_for_date(datestr, entity):
     count = get_count_for_date(datestr, entity.strip())
     return str(count)
 
-'''
-@app.route("/fibois/ajax/count_for_jobboard/<jobboard>")
-def count_for_jobboard(jobboard):
-    count = get_count_for_jobboard(jobboard)
-    return str(count)
-
-@app.route("/fibois/ajax/processed_count_for_jobboard/<jobboard>")
-def processed_count_for_jobboard(jobboard):
-    count = get_count_for_jobboard_per_status(jobboard, "processed")
-    return str(count)
-
-@app.route("/fibois/ajax/errored_count_for_jobboard/<jobboard>")
-def errored_count_for_jobboard(jobboard):
-    count = get_count_for_jobboard_per_status(jobboard, "errored")
-    return str(count)
-
-@app.route("/fibois/ajax/pending_count_for_jobboard/<jobboard>")
-def pending_count_for_jobboard(jobboard):
-    count = get_count_for_jobboard_per_status(jobboard, "pending")
-    return str(count)
-
-### count for date
-
-@app.route("/fibois/ajax/count_for_date/<datestr>")
-def count_for_date(datestr):
-    count = get_count_for_date(datestr)
-    return str(count)
-
-@app.route("/fibois/ajax/parsed_count_for_date/<datestr>")
-def parsed_count_for_date(datestr):
-    count = get_parsed_count_for_date(datestr)
-    return str(count)
-
-###
-
-@app.route("/fibois/stats-jb-date")
-def fibois_stats_jb_date():
-    dates = get_dates()
-    jobboards = get_jobboards()
-    return render_template("fibois_stats_jb_date_ajax.html", dates=dates, jobboards=jobboards, json=json)
-
-@app.route("/fibois/ajax/count_for_jobboard_date/<jobboard>/<datestr>")
-def count_for_jobboard_date(jobboard, datestr):
-    count = get_count_for_jb_date(jobboard, datestr)
-    return str(count)
-
-@app.route("/fibois/stats-keywords")
-def fibois_stats_keywords():
-    jobboards = get_jobboards()
-    return render_template("fibois_stats_keywords.html", jobboards=jobboards)
-
-@app.route("/fibois/stats-keywords-data/<jobboard>")
-def fibois_stats_keywords_data(jobboard):
-    #stat = get_stat_by_keywords(jobboard)
-    #return render_template("fibois_stats_keywords_data.html", stat=stat, jobboard=jobboard)
-    keywords = get_keywords(jobboard)
-    return render_template("fibois_stats_keywords_data_ajax.html", jobboard=jobboard, keywords=keywords, total=len(keywords), json=json)
-
-@app.route("/fibois/ajax/count_for_keyword/<jobboard>/<keyword>")
-def count_for_jobboard_keywords(jobboard, keyword):
-    count = get_count_for_keywords(jobboard, keyword)
-    return str(count)
-
-@app.route("/fibois/stats-expired")
-def fibois_stats_expired():
-    jobboards = get_jobboards()
-    return render_template("fibois_stats_expired.html", jobboards=jobboards, json=json)
-
-@app.route("/fibois/ajax/expired_for_jobboard/<jobboard>")
-def expired_for_jobboard(jobboard):
-    count = get_expired_for_jobboard(jobboard)
-    return str(count)
-
-@app.route("/fibois/ajax/expired_total")
-def expired_total():
-    count = get_expired_total()
-    return str(count)
+@app.route("/spiderkeeper/options", methods=['get', 'post'])
+def options_page():
+    if request.method == 'POST':
+        options = Option.get_options()
+        for option_name in list(map(lambda i: i.option_name, options)):
+            if option_name in request.form:
+                new_value = request.form[option_name]
+                if option_name in options_types and options_types[option_name] == 'BOOLEAN':
+                    new_value = 1
+            else:
+                if option_name in options_types and options_types[option_name] == 'BOOLEAN':
+                    new_value = 0
+            option = Option.get_option(option_name)
+            option.option_value = new_value
+            Option.set_option(option)
+    options = Option.get_options()
+    return render_template("options.html", options=options, options_types=options_types, Option=Option)
 
 '''
+@app.route("/fibois/ajax/get_options")
+def get_options():
+    options = Option.get_options()
+    if options is not None:
+        return json.dumps(options)
+    return '[]'
 
+@app.route("/fibois/ajax/set_option/<name>/<value>")
+def set_option(name, value):
+    option = Option.get_option(name)
+    if option is not None:
+        option.value = value
+        Option.set_option(option)
+    else:
+        option = Option(option_name=name, option_value=value)
+        Option.set_option(option)
+    option = Option.get_option(name)
+    if option is not None:
+        return json.dumps(option.to_dict())
+    return '{}'
 
+'''

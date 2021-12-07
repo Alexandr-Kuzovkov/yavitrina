@@ -17,7 +17,7 @@ NEWSPIDER_MODULE = 'yavitrina.spiders'
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36'
+USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36'
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = False
@@ -46,8 +46,8 @@ CONCURRENT_REQUESTS_PER_DOMAIN = 16
 DOCKER_HOST_IP = os.popen("ip ro | grep default | cut -d' ' -f 3").read().strip()
 
 #SPLASH_URL = 'http://localhost:8050/'
-#SPLASH_URL = 'http://hub.kuzovkov12.ru:8050/'
-SPLASH_URL = 'http://172.105.247.179:9050/'
+SPLASH_URL = 'http://hub.kuzovkov12.ru:8050/'
+#SPLASH_URL = 'http://172.105.247.179:9050/'
 #SPLASH_URL = 'http://{docker_host}:8060/'.format(docker_host=DOCKER_HOST_IP)
 
 #SPLASH_URL = 'http://splash:8050/'
@@ -74,6 +74,7 @@ SPIDER_MIDDLEWARES = {
 }
 
 REDIRECT_ENABLED = True
+RETRY_ENABLED = True
 
 # Enable or disable downloader middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
@@ -95,11 +96,12 @@ DOWNLOADER_MIDDLEWARES = {
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
     'yavitrina.pipelines.YavitrinaPipeline': 300,
+    'yavitrina.pipelines.DatabaseExporterPipeline': 310,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See http://doc.scrapy.org/en/latest/topics/autothrottle.html
-AUTOTHROTTLE_ENABLED = True
+AUTOTHROTTLE_ENABLED = False
 # The initial download delay
 AUTOTHROTTLE_START_DELAY = 0.5
 # The maximum download delay to be set in case of high latencies
