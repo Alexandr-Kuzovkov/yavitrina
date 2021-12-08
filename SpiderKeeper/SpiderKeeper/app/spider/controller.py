@@ -479,8 +479,12 @@ def inject_project():
         session['project_id'] = project.id
     if session.get('project_id'):
         project_context['project'] = Project.find_project_by_id(session['project_id'])
-        project_context['spider_list'] = [spider_instance.to_dict() for spider_instance in
-                                          SpiderInstance.query.filter_by(project_id=session['project_id']).all()]
+        hidden_spiders = Option.get_option_value('hidden_spiders', type='LIST')
+        if hidden_spiders is None:
+            hidden_spiders = []
+        project_context['spider_list'] = filter(lambda i: i['spider_name'] not in hidden_spiders, [spider_instance.to_dict() for spider_instance in
+                                          SpiderInstance.query.filter_by(project_id=session['project_id']).all()])
+        pprint(project_context['spider_list'])
     else:
         project_context['project'] = {}
     return project_context

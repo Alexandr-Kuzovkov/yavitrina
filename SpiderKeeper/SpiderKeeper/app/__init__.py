@@ -88,6 +88,11 @@ def init_database():
         option = Option(option_name='dont_run_duplicate', option_value=0,
                         option_desc='Don\'t run the same spider with the same parameters already running')
         Option.set_option(option)
+    option = Option.get_option('hidden_spiders')
+    if option is None:
+        option = Option(option_name='hidden_spiders', option_value='test',
+                        option_desc='List of spiders to hide in the spider list')
+        Option.set_option(option)
 
 
 # regist spider service proxy
