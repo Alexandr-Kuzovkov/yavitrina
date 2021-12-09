@@ -29,12 +29,30 @@ from yavitrina.items import ProductItem
 from yavitrina.items import ImageItem
 from yavitrina.items import SearchTagItem
 from yavitrina.items import CategoryTagItem
-from yavitrina.items import SettingItem
-from yavitrina.items import SettingValueItem
 from scrapy.exceptions import CloseSpider
 from yavitrina.config import load_config
 from yavitrina.extensions import PgSQLStore
 from yavitrina.extensions import MySQLStore
+from yavitrina.items import SettingItem
+from yavitrina.items import SettingValueItem
+from yavitrina.items import ExSettingItem
+from yavitrina.items import ExSettingValueItem
+from yavitrina.items import ExProductItem
+from yavitrina.items import ExProductColorItem
+from yavitrina.items import ExSearchProductItem
+from yavitrina.items import ExProductImageItem
+from yavitrina.items import ExProductPriceItem
+from yavitrina.items import ExReviewItem
+from yavitrina.items import ExCategoryItem
+from yavitrina.items import ExCategorySearchItem
+from yavitrina.items import ExProductCategoryItem
+from yavitrina.items import ExTagItem
+from yavitrina.items import ExProductSettingsItem
+from yavitrina.items import ExNewCategoryItem
+from yavitrina.items import ExCategoryHasSettingsItem
+
+
+
 
 def create_folder(directory):
     logger.debug('Create directory. "%s"' % directory)
@@ -131,7 +149,7 @@ class DatabaseExporterPipeline(object):
         crawler.signals.connect(pipeline.spider_opened, signals.spider_opened)
         crawler.signals.connect(pipeline.spider_closed, signals.spider_closed)
         self.stats = crawler.stats
-        if crawler.spider is not None and crawler.spider.name in ['test2']:
+        if crawler.spider is not None and crawler.spider.name in ['test2', 'exporter']:
             return pipeline
 
     def spider_opened(self, spider):
@@ -558,7 +576,7 @@ class YavitrinaDatabaseExporter(object):
     def export_item(self, item):
         entity = None
         res = None
-        if isinstance(item, SettingItem):
+        if isinstance(item, ExSettingItem):
             logging.debug('saving setting item')
             entity = 'setting'
             res = self.save_setting(item)

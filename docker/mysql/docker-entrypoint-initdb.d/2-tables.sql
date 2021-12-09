@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS `product` (
   `url_review` VARCHAR(255) NULL DEFAULT NULL,
   `rating` FLOAT NULL DEFAULT NULL,
   `count_review` INT NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
+  `product_id` VARCHAR(255) DEFAULT NULL,
+  `rate` VARCHAR(255) DEFAULT NULL,
   PRIMARY KEY (`id`))
 ENGINE = InnoDB;
 
@@ -59,6 +62,7 @@ CREATE TABLE IF NOT EXISTS `product_color` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `hex` VARCHAR(255) NULL DEFAULT NULL,
   `product_id` INT NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`, `product_id`),
   INDEX `pro_idx` (`product_id` ASC) ,
   CONSTRAINT `pro`
@@ -79,6 +83,7 @@ CREATE TABLE IF NOT EXISTS `search_product` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `product_id` INT NOT NULL,
   `child_id` INT NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`),
   INDEX `f_idx` (`product_id` ASC) ,
   INDEX `1_idx` (`child_id` ASC) ,
@@ -105,6 +110,7 @@ CREATE TABLE IF NOT EXISTS `product_image` (
   `path` TEXT NULL DEFAULT NULL,
   `type` ENUM('main', 'child') NULL DEFAULT NULL,
   `product_id` INT NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`),
   INDEX `prod_idx` (`product_id` ASC) ,
   CONSTRAINT `prod2`
@@ -157,6 +163,7 @@ CREATE TABLE IF NOT EXISTS `review` (
   `comment` TEXT NULL DEFAULT NULL,
   `use_experince` VARCHAR(255) NULL DEFAULT NULL,
   `city` VARCHAR(255) NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`),
   INDEX `product_idx` (`product_id` ASC) ,
   CONSTRAINT `product55`
@@ -178,6 +185,7 @@ CREATE TABLE IF NOT EXISTS `category` (
   `parent_id` INT NULL DEFAULT NULL,
   `description` TEXT NULL DEFAULT NULL,
   `image_path` TEXT NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`))
 ENGINE = InnoDB;
 
@@ -191,6 +199,7 @@ CREATE TABLE IF NOT EXISTS `category_search` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `child_id` INT NULL DEFAULT NULL,
   `category_id` INT NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`),
   INDEX `category_idx` (`category_id` ASC) ,
   INDEX `category45_idx` (`child_id` ASC) ,
@@ -216,6 +225,7 @@ CREATE TABLE IF NOT EXISTS `product_category` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `product_id` INT NULL DEFAULT NULL,
   `category_id` INT NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`),
   INDEX `prod_idx` (`product_id` ASC) ,
   INDEX `category_idx` (`category_id` ASC) ,
@@ -241,6 +251,7 @@ CREATE TABLE IF NOT EXISTS `tag` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NULL DEFAULT NULL,
   `category_id` INT NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`),
   INDEX `fk_tag_category1_idx` (`category_id` ASC) ,
   CONSTRAINT `fk_tag_category1`
@@ -259,6 +270,7 @@ DROP TABLE IF EXISTS `settings` ;
 CREATE TABLE IF NOT EXISTS `settings` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`))
 ENGINE = InnoDB;
 
@@ -272,6 +284,7 @@ CREATE TABLE IF NOT EXISTS `settings_value` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `settings_id` INT NULL DEFAULT NULL,
   `value` TEXT NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`),
   INDEX `settings_idx` (`settings_id` ASC) ,
   CONSTRAINT `settings4`
@@ -291,7 +304,8 @@ CREATE TABLE IF NOT EXISTS `product_settings` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `product_id` INT NULL DEFAULT NULL,
   `settings_id` INT NULL DEFAULT NULL,
-  `settings_value_Id` INT NULL DEFAULT NULL,
+  `settings_value_id` INT NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`),
   INDEX `product_idx` (`product_id` ASC) ,
   INDEX `settings_idx` (`settings_id` ASC) ,
@@ -323,6 +337,7 @@ CREATE TABLE IF NOT EXISTS `new_category` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `category_id` INT NULL DEFAULT NULL,
   `new_category_id` INT NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`),
   INDEX `category_idx` (`category_id` ASC) ,
   INDEX `new_idx` (`new_category_id` ASC) ,
@@ -348,6 +363,7 @@ CREATE TABLE IF NOT EXISTS `category_has_settings` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `settings_id` INT NULL DEFAULT NULL,
   `category_id` INT NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`),
   INDEX `settings_idx` (`settings_id` ASC) ,
   INDEX `category_idx` (`category_id` ASC) ,

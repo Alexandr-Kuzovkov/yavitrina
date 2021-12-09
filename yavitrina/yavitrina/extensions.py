@@ -393,6 +393,11 @@ class MySQLBase(object):
             self.dbclose()
         return res
 
+    def _get_tables_list(self):
+        sql = "SHOW TABLES"
+        res = self._getraw(sql, ['Tables_in_{database}'.format(database=self.dbname)])
+        return map(lambda i: i['Tables_in_{database}'.format(database=self.dbname)], res)
+
     def _get(self, table, field_list=None, where='', data=None):
         self.dbopen()
         if field_list is None:
@@ -469,12 +474,37 @@ class MySQLBase(object):
         else:
             return val
 
-
-
-
+    def _clear_table(self, table):
+        sql = ' '.join(['DELETE FROM', table])
+        self.dbopen()
+        try:
+            self.cur.execute(sql)
+        except Exception as ex:
+            self.conn.rollback()
+            self.dbclose()
+            raise ex
+        else:
+            self.conn.commit()
+            self.dbclose()
 
 
 class MySQLStore(MySQLBase):
+
+    exclude_tables = []
+
+    def clear_db(self):
+        tables = self._get_tables_list()
+        while len(tables) > 0:
+            table = tables[0]
+            if table in self.exclude_tables:
+                tables.pop(0)
+                continue
+            try:
+                self._clear_table(table)
+            except Exception as ex:
+                tables.append(tables.pop(0))
+            else:
+                tables.pop(0)
 
     def save_setting(self, data):
         res = self._get('settings', field_list=None, where='name=%s', data=[data['name']])
