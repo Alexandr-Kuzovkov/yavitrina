@@ -1,4 +1,7 @@
 jobscrapers/jobscrapers/files/
 feedgenerator/feeds/
+.git
+docker/db/dumps/*
+docker/mysql/dumps/*
 
 

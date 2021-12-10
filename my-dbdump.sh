@@ -5,9 +5,11 @@
 ###########################
 
 DB_USER=vitrina
-DB_PASS=foBCKFduY5
 DB_NAME=vitrina
+DB_PASS=password
 DUMP_NAME=dump.sql.gz
+eval $(cat .env)
+DB_PASS=$MYSQL_DB_PASS
 
 case "$1" in
   timestamp)

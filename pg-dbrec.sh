@@ -5,9 +5,11 @@
 ##################################
 
 DB_USER=vitrina
-DB_PASS=foBCKFduY5
+DB_PASS=password
 DB_NAME=vitrina
 DUMP_NAME=dump.sql.gz
+eval $(cat .env)
+DB_PASS=$PG_DB_PASS
 
 if [ "$#" -eq 1 ]; then
     if [  -e "docker/db/dumps/$1" ]; then

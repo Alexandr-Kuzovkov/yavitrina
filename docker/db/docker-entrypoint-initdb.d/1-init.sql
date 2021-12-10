@@ -27,6 +27,6 @@ CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 SET default_with_oids = false;
-ALTER ROLE vitrina WITH PASSWORD 'foBCKFduY5';
+ALTER ROLE vitrina WITH PASSWORD 'P@ssw0rd';
 --------------
 
