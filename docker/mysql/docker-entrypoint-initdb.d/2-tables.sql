@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS `product` (
   `description` TEXT NULL DEFAULT NULL,
   `price` DECIMAL(10,2) NULL DEFAULT NULL,
   `is_in_stock` TINYINT(1) NULL DEFAULT NULL,
-  `url` VARCHAR(255) NULL DEFAULT NULL,
-  `url_review` VARCHAR(255) NULL DEFAULT NULL,
+  `url` TEXT NULL DEFAULT NULL,
+  `url_review` TEXT NULL DEFAULT NULL,
   `rating` FLOAT NULL DEFAULT NULL,
   `count_review` INT NULL DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT now(),
@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS `product` (
   `rate` VARCHAR(255) DEFAULT NULL,
   PRIMARY KEY (`id`))
 ENGINE = InnoDB;
-
 
 -- -----------------------------------------------------
 -- Table `dynamic_price`

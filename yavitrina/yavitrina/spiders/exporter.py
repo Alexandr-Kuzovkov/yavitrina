@@ -66,19 +66,62 @@ class ExporterSpider(scrapy.Spider):
 
     def start_requests(self):
         url = 'http://localhost:6800'
-        request = scrapy.Request(url, callback=self.starting_export)
+        request = scrapy.Request(url, callback=self.export_product)
         yield request
 
 
     def starting_export(self, response):
-        #get latest
+        self.export_product(response)
+
+    def export_product(self, response):
+        latest_product_time = self.db_export.get_latest_time('product')
+        if latest_product_time is not None:
+            condition = {'created_at >=': str(latest_product_time)}
+        else:
+            condition = {'created_at >=': '1970-01-01'}
+        table = 'product'
+        total_products = self.db_import.get_items_total(table, condition)
+        # pprint(total_products)
+        LIMIT = 100
+        offsets = range(0, total_products, LIMIT)
+        #offsets = offsets[0:5]
+        #pprint(offsets)
+        for offset in offsets:
+            products = self.db_import.get_items_chunk(table, condition, offset, LIMIT)
+            for product in products:
+                ex_product = ItemLoader(item=ExProductItem(), response=response)
+                rating = None
+                if product['rate'] is not None:
+                    rating = float(product['rate'].strip().replace('(', '').replace(')', '').replace('/', '.'))
+                ex_product.add_value('title', product['title'])
+                ex_product.add_value('description', product['description'])
+                ex_product.add_value('price', product['price'])
+                ex_product.add_value('url', product['shop_link'])
+                ex_product.add_value('url_review', product['shop_link2'])
+                ex_product.add_value('rating', rating)
+                ex_product.add_value('product_id', product['product_id'])
+                ex_product.add_value('rate', product['rate'])
+                ex_product.add_value('created_at', self.datetime2str(product['created_at']))
+                yield ex_product.load_item()
+
+
+
+
+    def str2datetime(self, str):
+        d = map(lambda i: int(i), str.split(' ')[0].split('-'))
+        t = map(lambda i: int(i), str.split(' ')[1].split('.')[0].split(':'))
+        res = datetime.datetime(d[0], d[1], d[2], t[0], t[1], t[2], 0)
+        return res
+
+    def datetime2str(self, dt):
+        return str(dt).split('+').pop(0)
+
+    def helper(self):
         tables = self.db_export._get_tables_list()
         pprint(tables)
         for table in tables:
             fld_lst = self.db_export._get_fld_list(table)
             print('{table}: ({columns})'.format(table=table, columns=','.join(fld_lst)))
-
-
 
 
 

@@ -109,6 +109,8 @@ class ExProductItem(scrapy.Item):
     rating = scrapy.Field()
     count_review = scrapy.Field()
     created_at = scrapy.Field()
+    product_id = scrapy.Field()
+    rate = scrapy.Field()
 
 class ExProductColorItem(scrapy.Item):
     hex = scrapy.Field()

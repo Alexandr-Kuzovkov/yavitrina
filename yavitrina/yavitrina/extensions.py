@@ -172,6 +172,17 @@ class PgSQLBase(object):
         else:
             return val
 
+    def _getone(self, sql, data=None):
+        self.dbopen()
+        if data is None:
+            self.cur.execute(sql)
+        else:
+            self.cur.execute(sql, data)
+        data = self.cur.fetchone()
+        if len(data) > 0:
+            return data[0]
+        return None
+
 
 class PgSQLStore(PgSQLBase):
 
@@ -322,6 +333,26 @@ class PgSQLStore(PgSQLBase):
             self._insert('settings_value', [data])
             return None
 
+    def get_items_total(self, table, condition):
+        if type(condition) is not dict:
+            raise Exception('Type of the condition must be dict!')
+        cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
+        data = condition.values()
+        sql = "SELECT count(*) AS total FROM {table} WHERE {cond}".format(table=table, cond=cond)
+        self.dbopen()
+        res = self._getone(sql, data)
+        return res
+
+    def get_items_chunk(self, table, condition, offset, limit, order='id'):
+        if type(condition) is not dict:
+            raise Exception('Type of the condition must be dict!')
+        cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
+        data = condition.values()
+        sql = "SELECT * FROM {table} WHERE {cond} ORDER BY {order} OFFSET {offset} LIMIT {limit} ".format(table=table, cond=cond, order=order, limit=limit, offset=offset)
+        fld_lst = self._get_fld_list(table)
+        res = self._getraw(sql, fld_lst, data)
+        return res
+
 
 
 class MySQLBase(object):
@@ -419,6 +450,14 @@ class MySQLBase(object):
         self.dbclose()
         return res
 
+    def _getone(self, sql):
+        self.dbopen()
+        self.cur.execute(sql)
+        data = self.cur.fetchone()
+        if len(data) > 0:
+            return data[0]
+        return None
+
     def _insert(self, table, data):
         if type(data) is not list:
             raise Exception('Type of data must be list!')
@@ -491,6 +530,8 @@ class MySQLBase(object):
 class MySQLStore(MySQLBase):
 
     exclude_tables = []
+    buffer_size = 200
+    buffer = {}
 
     def clear_db(self):
         tables = self._get_tables_list()
@@ -506,14 +547,34 @@ class MySQLStore(MySQLBase):
             else:
                 tables.pop(0)
 
-    def save_setting(self, data):
-        res = self._get('settings', field_list=None, where='name=%s', data=[data['name']])
-        if len(res) > 0:
-            setting = res[0]
-            return None
-        else:
-            res = self._insert('settings', [data])
-            return res
+    def get_latest_time(self, table):
+        sql = "SELECT max(created_at) AS last_time FROM {table}".format(table=table)
+        res = self._getone(sql)
+        return res
 
+    def flush(self):
+        for table in self.buffer.keys():
+            if len(self.buffer[table]) > 0:
+                self._insert(table, self.buffer[table])
+
+
+    def save_product(self, data):
+        table = 'product'
+        if table not in self.buffer:
+            self.buffer[table] = []
+        if len(self.buffer[table]) < self.buffer_size:
+            self.buffer[table].append(data)
+        else:
+            try:
+                product_ids = map(lambda i: i['product_id'], self.buffer[table])
+                exist_items = self._getraw("SELECT product_id FROM product WHERE product_id IN (%s)" % ','.join(product_ids), ['product_id'], None)
+                exist_product_ids = map(lambda i: i['product_id'], exist_items)
+                filtered_buffer = filter(lambda i: i['product_id'] not in exist_product_ids, self.buffer[table])
+                self._insert(table, filtered_buffer)
+                self.buffer[table] = []
+            except Exception as ex:
+                print(ex)
+            finally:
+                self.buffer[table].append(data)
 
 

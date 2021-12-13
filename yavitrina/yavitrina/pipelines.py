@@ -571,28 +571,32 @@ class YavitrinaDatabaseExporter(object):
             self.db_export.clear_db()
 
     def finish_exporting(self):
+        self.db_export.flush()
         logging.info('Exporting done: stat: {stat}'.format(stat=str(self.stat)))
 
     def export_item(self, item):
         entity = None
         res = None
-        if isinstance(item, ExSettingItem):
-            logging.debug('saving setting item')
-            entity = 'setting'
-            res = self.save_setting(item)
+        if isinstance(item, ExProductItem):
+            logging.debug('saving product item')
+            entity = 'product'
+            res = self.save_product(item)
 
 
-    def save_setting(self, item):
+    def save_product(self, item):
         data = {}
         mapping = {}
         for key, val in item.items():
             if key in mapping:
                 key = mapping[key]
             if type(val) is list:
-                data[key] = u','.join(map(lambda i: unicode(i), val))
+                try:
+                    data[key] = u','.join(map(lambda i: unicode(i), val))
+                except UnicodeDecodeError as ex:
+                    data[key] = ','.join(map(lambda i: i, val))
             else:
                 data[key] = val
-        self.db_export.save_setting(data)
+        self.db_export.save_product(data)
 
 
 
