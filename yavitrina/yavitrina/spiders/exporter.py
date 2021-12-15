@@ -76,7 +76,8 @@ class ExporterSpider(scrapy.Spider):
         #self.export_product_colors(data['product_colors'])
         #self.export_search_product(data['related_products'])
         #self.export_product_image(data['product_colors'].keys())
-        self.export_product_price(data['product_prices'])
+        #self.export_product_price(data['product_prices'])
+        self.export_review(data['feedbacks'])
 
     def export_product(self):
         self.logger.info('export product...')
@@ -92,6 +93,7 @@ class ExporterSpider(scrapy.Spider):
         product_colors = {}
         related_products = {}
         product_prices = {}
+        feedbacks = {}
         offsets = range(0, total_products, LIMIT)
         for offset in offsets:
             buffer = []
@@ -118,6 +120,7 @@ class ExporterSpider(scrapy.Spider):
                     related_products[product['product_id']] = product['related_products']
                 if product['feedbacks'] is not None:
                     product_prices[product['product_id']] = {'price': product['price'], 'name': product['title'], 'rating': rating, 'count_review': len(product['feedbacks'])}
+                    feedbacks[product['product_id']] = product['feedbacks']
             product_ids = map(lambda i: i['product_id'], buffer)
             sql = "SELECT product_id FROM product WHERE product_id IN (%s)" % ','.join(map(lambda i: "'%s'" % i, product_ids))
             exist_items = self.db_export._getraw(sql, ['product_id'], None)
@@ -128,7 +131,8 @@ class ExporterSpider(scrapy.Spider):
         return {
             'product_colors': product_colors,
             'related_products': related_products,
-            'product_prices': product_prices
+            'product_prices': product_prices,
+            'feedbacks': feedbacks
         }
 
     def export_product_colors(self, product_colors):
@@ -236,6 +240,45 @@ class ExporterSpider(scrapy.Spider):
                         product['id'],
                         product_prices[product['product_id']]['count_review'],
                         product_prices[product['product_id']]['rating']
+                    ])
+                self.db_export.conn.commit()
+            except Exception as ex:
+                self.logger.error(ex)
+        self.db_export.dbclose()
+        self.logger.info('done')
+
+    def export_review(self, feedbacks):
+        self.logger.info('export product_price')
+        product_ids = feedbacks.keys()
+        LIMIT = 100
+        offsets = range(0, len(product_ids), LIMIT)
+        self.db_export.dbopen()
+        for offset in offsets:
+            part_ids = product_ids[offset:offset + LIMIT]
+            sql = "SELECT id, product_id, url FROM product WHERE product_id IN (%s)" % ','.join(map(lambda i: "'%s'" % i, part_ids))
+            products = self.db_export._getraw(sql, ['id', 'product_id', 'url'], None)
+            self.db_export.dbopen()
+            try:
+                for product in products:
+                    sql = "INSERT INTO review (name, dignity, flaw, grade, product_id, date, image, comment, use_experince, city) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                    date = None
+                    city = None
+                    if feedbacks[product['product_id']]['date'] is not None:
+                        parts = feedbacks[product['product_id']]['date'].split(',')
+                        date = ''.join(parts[-1:]).strip()
+                        if len(parts) > 1:
+                            city = ''.join(parts[0:1]).strip()
+                    self.db_export.cur.execute(sql, [
+                        feedbacks[product['product_id']]['name'],
+                        feedbacks[product['product_id']]['plus'],
+                        feedbacks[product['product_id']]['minus'],
+                        feedbacks[product['product_id']]['eval'],
+                        product['id'],
+                        date,
+                        feedbacks[product['product_id']]['image'],
+                        feedbacks[product['product_id']]['comment'],
+                        feedbacks[product['product_id']]['experience'],
+                        city
                     ])
                 self.db_export.conn.commit()
             except Exception as ex:

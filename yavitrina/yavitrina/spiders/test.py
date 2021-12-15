@@ -115,8 +115,9 @@ class TestSpider(scrapy.Spider):
         #url = 'https://yavitrina.ru/shampuni'
         #url = 'https://yavitrina.ru/verhnyaya-odezhda-dlya-malyshey'
         #request = self.getRequest(url, self.parse_sub_category3)
-        #request.meta['parent'] = url
-        #yield request
+        # request = self.getRequest(url, self.parse_product_page, request_type='headless', use_scrapestack=True)
+        # request.meta['parent'] = url
+        # yield request
 
         #update feedbacks
         sql = "SELECT count(*) as total FROM product WHERE jsonb_array_length(feedbacks) > 0"
@@ -125,8 +126,8 @@ class TestSpider(scrapy.Spider):
         LIMIT = 100
         offsets = range(0, total, LIMIT)
         for offset in offsets:
-            sql = "SELECT title, url, product_id, feedbacks FROM product WHERE jsonb_array_length(feedbacks) > 0  ORDER BY id OFFSET {offset} LIMIT {limit}".format(offset=offset, limit=LIMIT)
-            products = self.db._getraw(sql, ['title', 'url', 'product_id', 'feedbacks'])
+            sql = "SELECT title, url, product_id, feedbacks, category FROM product WHERE jsonb_array_length(feedbacks) > 0  ORDER BY id OFFSET {offset} LIMIT {limit}".format(offset=offset, limit=LIMIT)
+            products = self.db._getraw(sql, ['title', 'url', 'product_id', 'feedbacks', 'category'])
             for product in products:
                 url = product['url']
                 request = self.getRequest(url, self.parse_product_page, request_type='headless', use_scrapestack=True)
@@ -360,6 +361,7 @@ class TestSpider(scrapy.Spider):
             item['minus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Недостатки']/following-sibling::p[1]").xpath('text()').extract())
             item['comment'] = ' '.join(fb_response.xpath(u"//span[text() = 'Комментарий']/following-sibling::p[1]").xpath('text()').extract())
             item['date'] = ' '.join(fb_response.xpath('//div[3]').xpath('text()').extract())
+            item['image'] = ' '.join(fb_response.xpath('//img').xpath('@src').extract())
             data.append(item)
         pprint(data)
         return json.dumps(data)

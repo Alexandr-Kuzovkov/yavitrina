@@ -597,6 +597,7 @@ class VitrinaSpider(scrapy.Spider):
             item['minus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Недостатки']/following-sibling::p[1]").xpath('text()').extract())
             item['comment'] = ' '.join(fb_response.xpath(u"//span[text() = 'Комментарий']/following-sibling::p[1]").xpath('text()').extract())
             item['date'] = ' '.join(fb_response.xpath('//div[3]').xpath('text()').extract())
+            item['image'] = ' '.join(fb_response.xpath('//img').xpath('@src').extract())
             data.append(item)
         return json.dumps(data)
 
