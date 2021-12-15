@@ -29,6 +29,7 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from urllib import urlencode
 
 
+
 class TestSpider(scrapy.Spider):
     name = 'test'
     allowed_domains = ['yavitrina.ru', 'i.yavitrina.ru']
@@ -45,9 +46,11 @@ class TestSpider(scrapy.Spider):
     base_url = 'https://yavitrina.ru'
     lua_src = pkgutil.get_data('yavitrina', 'lua/html-render.lua')
     scrapestack_access_key = ''
+    db = None
 
     custom_settings = {
-        'LOG_LEVEL': 'DEBUG',
+        #'LOG_LEVEL': 'DEBUG',
+        'LOG_LEVEL': 'INFO',
         'SELENIUM_GRID_URL': 'http://selenium-hub:4444/wd/hub',  # Example for local grid with docker-compose
         'SELENIUM_NODES': 1,  # Number of nodes(browsers) you are running on your grid
         'SELENIUM_CAPABILITIES': DesiredCapabilities.CHROME,
@@ -93,27 +96,44 @@ class TestSpider(scrapy.Spider):
         #print(driver.page_source)
 
     def start_requests(self):
-        url = 'https://yavitrina.ru/product/674779192'
+        #url = 'https://yavitrina.ru/product/674779192'
         url = 'https://yavitrina.ru/product/677731028'
-        url = 'https://yavitrina.ru/product/382715171'
+        #url = 'https://yavitrina.ru/product/382715171'
         #url = 'https://yavitrina.ru/product/822105004'
         #url = 'https://yavitrina.ru/product/14008662'
-        url = 'https://yavitrina.ru/zhenskaya-obuv'
+        #url = 'https://yavitrina.ru/zhenskaya-obuv'
         #url = 'https://hub.kuzovkov12.ru:8001/googleapi'
         #DOCKER_HOST_IP = os.popen("ip ro | grep default | cut -d' ' -f 3").read().strip()
         #url = 'http://{DOCKER_HOST_IP}:8002/googleapi'.format(DOCKER_HOST_IP=DOCKER_HOST_IP)
         #request = self.getRequest(url, self.parse_product_page, request_type='scrapestack')
         #request = self.getRequest(url, self.parse_product_page, request_type='selenium', use_scrapestack=True)
-        request = self.getRequest(url, self.test_saving_filters, request_type='origin', use_scrapestack=False)
+        #request = self.getRequest(url, self.test_saving_filters, request_type='origin', use_scrapestack=False)
         #request = self.getRequest(url, self.parse_product_page, request_type='splash', use_scrapestack=True)
-        #request = self.getRequest(url, self.parse_product_page, request_type='origin', use_scrapestack=True)
+        #request = self.getRequest(url, self.parse_product_page, request_type='headless', use_scrapestack=True)
 
         #request = self.getRequest(url, self.parse_product_page)
         #url = 'https://yavitrina.ru/shampuni'
         #url = 'https://yavitrina.ru/verhnyaya-odezhda-dlya-malyshey'
         #request = self.getRequest(url, self.parse_sub_category3)
-        request.meta['parent'] = url
-        yield request
+        #request.meta['parent'] = url
+        #yield request
+
+        #update feedbacks
+        sql = "SELECT count(*) as total FROM product WHERE jsonb_array_length(feedbacks) > 0"
+        total = self.db._getone(sql)
+        pprint('total: {total}'.format(total=total))
+        LIMIT = 100
+        offsets = range(0, total, LIMIT)
+        for offset in offsets:
+            sql = "SELECT title, url, product_id, feedbacks FROM product WHERE jsonb_array_length(feedbacks) > 0  ORDER BY id OFFSET {offset} LIMIT {limit}".format(offset=offset, limit=LIMIT)
+            products = self.db._getraw(sql, ['title', 'url', 'product_id', 'feedbacks'])
+            for product in products:
+                url = product['url']
+                request = self.getRequest(url, self.parse_product_page, request_type='headless', use_scrapestack=True)
+                request.meta['parent'] = url
+                request.meta['category'] = product['category']
+                yield request
+
 
     def parse_product_page(self, response):
         #pprint(response.text)
@@ -131,7 +151,6 @@ class TestSpider(scrapy.Spider):
         product_id = requested_url.split('/').pop()
         l.add_value('product_id', product_id)
         l.add_value('html', response.text)
-        #l.add_value('url', url)
         l.add_value('url', requested_url)
         l.add_value('title', title)
         l.add_value('description', description)
@@ -139,6 +158,10 @@ class TestSpider(scrapy.Spider):
         l.add_value('shop_link', shop_link)
         if 'ymarket_link' in response.meta and len(response.meta['ymarket_link']) > 0:
             l.add_value('shop_link2', response.meta['ymarket_link'])
+        if 'rate' in response.meta and len(response.meta['rate']) > 0:
+            l.add_value('rate', response.meta['rate'])
+        if 'colors' in response.meta and len(response.meta['colors']) > 0:
+            l.add_value('colors', response.meta['colors'])
         parameters = self.parse_parameters(response)
         l.add_value('parameters', parameters)
         feedbacks = self.parse_feedbacks(response)
@@ -149,17 +172,20 @@ class TestSpider(scrapy.Spider):
                 break
         elif 'category' in response.meta:
             l.add_value('category', response.meta['category'])
+        related_products = ','.join(map(lambda i: i.split('/').pop(), response.css('div[class="related-products"] div[class="b-info-wrap"] a').xpath('@href').extract()))
+        if len(related_products) > 0:
+            l.add_value('related_products', related_products)
         yield l.load_item()
         #save images
-        image_urls = response.css('div[class="photos"] img').xpath('@src').extract()
-        for link in image_urls:
-            if link.startswith('//') or (not link.startswith('https:')):
-                link = 'https:{img}'.format(img=link)
-            request = scrapy.Request(link, self.download_image)
-            request.meta['product_id'] = product_id
-            request.meta['filename'] = '-'.join(link.split('/')[-3:])
-            request.meta['autotype'] = True
-            yield request
+        # image_urls = response.css('div[class="photos"] img').xpath('@src').extract()
+        # for link in image_urls:
+        #     if link.startswith('//') or (not link.startswith('https:')):
+        #         link = 'https:{img}'.format(img=link)
+        #     request = scrapy.Request(link, self.download_image)
+        #     request.meta['product_id'] = product_id
+        #     request.meta['filename'] = '-'.join(link.split('/')[-3:])
+        #     request.meta['autotype'] = True
+        #     yield request
 
 
     def download_image(self, response):
@@ -333,7 +359,9 @@ class TestSpider(scrapy.Spider):
             item['plus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Достоинства']/following-sibling::p[1]").xpath('text()').extract())
             item['minus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Недостатки']/following-sibling::p[1]").xpath('text()').extract())
             item['comment'] = ' '.join(fb_response.xpath(u"//span[text() = 'Комментарий']/following-sibling::p[1]").xpath('text()').extract())
+            item['date'] = ' '.join(fb_response.xpath('//div[3]').xpath('text()').extract())
             data.append(item)
+        pprint(data)
         return json.dumps(data)
 
     def parse_filters(self, response):

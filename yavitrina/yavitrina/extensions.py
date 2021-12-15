@@ -454,7 +454,7 @@ class MySQLBase(object):
         self.dbopen()
         self.cur.execute(sql)
         data = self.cur.fetchone()
-        if len(data) > 0:
+        if data is not None and len(data) > 0:
             return data[0]
         return None
 

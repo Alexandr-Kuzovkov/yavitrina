@@ -330,6 +330,8 @@ class YavitrinaPgSqlExporter(object):
         self.db = PgSQLStore(db_conf)
         if hasattr(self.spider, 'clear_db') and self.spider.clear_db:
             self.db.clear_db()
+        if self.spider.name in ['test']:
+            self.spider.db = self.db
 
     def finish_exporting(self):
         logging.info('Exporting done: stat: {stat}'.format(stat=str(self.stat)))
