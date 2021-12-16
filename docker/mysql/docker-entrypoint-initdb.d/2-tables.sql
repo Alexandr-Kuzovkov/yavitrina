@@ -181,6 +181,7 @@ DROP TABLE IF EXISTS `category` ;
 CREATE TABLE IF NOT EXISTS `category` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NULL DEFAULT NULL,
+  `url` VARCHAR(255) NULL DEFAULT NULL,
   `parent_id` INT NULL DEFAULT NULL,
   `description` TEXT NULL DEFAULT NULL,
   `image_path` TEXT NULL DEFAULT NULL,
@@ -269,10 +270,12 @@ DROP TABLE IF EXISTS `settings` ;
 CREATE TABLE IF NOT EXISTS `settings` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NULL DEFAULT NULL,
+  `url` VARCHAR(255) NULL DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`))
 ENGINE = InnoDB;
-
+CREATE UNIQUE INDEX uidx_settings
+ON settings (name,url);
 
 -- -----------------------------------------------------
 -- Table `settings_value`

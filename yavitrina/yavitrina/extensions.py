@@ -459,7 +459,7 @@ class MySQLBase(object):
             return data[0]
         return None
 
-    def _insert(self, table, data):
+    def _insert(self, table, data, ignore=False):
         if type(data) is not list:
             raise Exception('Type of data must be list!')
         self.dbopen()
@@ -467,7 +467,10 @@ class MySQLBase(object):
         for row in data:
             if type(row) is not dict:
                 raise Exception('Type of row must be dict!')
-            sql = ' '.join(['INSERT INTO', table, '(', ','.join(row.keys()), ') VALUES (', ','.join(['%s' for i in row.keys()]), ');'])
+            if ignore:
+                sql = ' '.join(['INSERT IGNORE INTO', table, '(', ','.join(row.keys()), ') VALUES (', ','.join(['%s' for i in row.keys()]), ');'])
+            else:
+                sql = ' '.join(['INSERT INTO', table, '(', ','.join(row.keys()), ') VALUES (', ','.join(['%s' for i in row.keys()]), ');'])
             try:
                 values = map(lambda val: self._serialise_dict(val), row.values())
                 self.cur.execute(sql, values)

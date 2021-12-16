@@ -72,12 +72,16 @@ class ExporterSpider(scrapy.Spider):
 
     def starting_export(self, response):
         self.helper()
-        data = self.export_product()
+        #data = self.export_product()
         #self.export_product_colors(data['product_colors'])
         #self.export_search_product(data['related_products'])
         #self.export_product_image(data['product_colors'].keys())
         #self.export_product_price(data['product_prices'])
-        self.export_review(data['feedbacks'])
+        #self.export_review(data['feedbacks'])
+        category_urls = self.export_category()
+        self.link_categories(category_urls)
+        self.export_settings()
+        self.export_settings_value()
 
     def export_product(self):
         self.logger.info('export product...')
@@ -99,7 +103,6 @@ class ExporterSpider(scrapy.Spider):
             buffer = []
             products = self.db_import.get_items_chunk(table, condition, offset, LIMIT)
             for product in products:
-                #ex_product = ItemLoader(item=ExProductItem(), response=response)
                 row = {}
                 rating = None
                 if product['rate'] is not None:
@@ -306,23 +309,70 @@ class ExporterSpider(scrapy.Spider):
             buffer = []
             categories = self.db_import.get_items_chunk(table, condition, offset, LIMIT)
             for category in categories:
-                # ex_product = ItemLoader(item=ExProductItem(), response=response)
                 row = {}
                 row['name'] = category['title']
                 row['description'] = category['description']
+                row['url'] = category['url']
                 row['image_path'] = category['img']
                 row['created_at'] = self.datetime2str(category['created_at'])
                 buffer.append(row)
-            category_names = map(lambda i: i['name'], buffer)
-            sql = "SELECT name FROM category WHERE name IN (%s)" % ','.join(map(lambda i: "'%s'" % i, category_names))
-            exist_items = self.db_export._getraw(sql, ['name'], None)
-            exist_category_names = map(lambda i: i['name'], exist_items)
-            filtered_buffer = filter(lambda i: i['name'] not in exist_category_names, buffer)
+                category_urls[category['url']] = {'parent_url': category['parent_url']}
+            urls = map(lambda i: i['url'], buffer)
+            sql = "SELECT url FROM category WHERE url IN (%s)" % ','.join(map(lambda i: "'%s'" % i, urls))
+            exist_items = self.db_export._getraw(sql, ['url'], None)
+            exist_urls = map(lambda i: i['url'], exist_items)
+            filtered_buffer = filter(lambda i: i['url'] not in exist_urls, buffer)
             self.db_export._insert(table, filtered_buffer)
         self.logger.info('done')
-        return {
-            'category_urls': category_urls,
-        }
+        return category_urls
+
+    def link_categories(self, category_urls):
+        self.logger.info('link categories...')
+        urls = category_urls.keys()
+        LIMIT = 100
+        offsets = range(0, len(urls), LIMIT)
+        self.db_export.dbopen()
+        for offset in offsets:
+            part_urls = urls[offset:offset + LIMIT]
+            sql = "SELECT id, url, name FROM category WHERE url IN (%s)" % ','.join(map(lambda i: "'%s'" % i, part_urls))
+            categories = self.db_export._getraw(sql, ['id', 'url', 'name'], None)
+            self.db_export.dbopen()
+            try:
+                for category in categories:
+                    parent_url = category_urls[category['url']]['parent_url']
+                    if parent_url is not None:
+                        parent_id = self.db_export._getone("SELECT id FROM category WHERE url='{parent_url}'".format(parent_url=parent_url))
+                        if parent_id is not None:
+                            sql = "UPDATE category SET parent_id={parent_id} WHERE id={id}".format(parent_id=parent_id, id=category['id'])
+                            self.db_export.cur.execute(sql)
+                self.db_export.conn.commit()
+            except Exception as ex:
+                self.logger.error(ex)
+        self.db_export.dbclose()
+        self.logger.info('done')
+
+    def export_settings(self):
+        self.logger.info('export settings...')
+        table = 'settings'
+        total_settings = self.db_import._getone("SELECT count(*) AS total FROM settings")
+        # pprint(total_settings)
+        LIMIT = 100
+        settings_urls = {}
+        offsets = range(0, total_settings, LIMIT)
+        for offset in offsets:
+            buffer = []
+            settings = self.db_import._getraw("SELECT name,url FROM settings ORDER BY id OFFSET {offset} LIMIT {limit}".format(offset=offset, limit=LIMIT), ['name', 'url'])
+            for setting in settings:
+                row = {}
+                row['name'] = setting['name']
+                row['url'] = setting['url']
+                buffer.append(row)
+            self.db_export._insert(table, buffer, ignore=True)
+        self.logger.info('done')
+
+    def export_settings_value(self):
+        self.logger.info('export settings_value...')
+        self.logger.info('done')
 
 
     def str2datetime(self, str):
