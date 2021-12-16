@@ -120,14 +120,21 @@ class TestSpider(scrapy.Spider):
         # yield request
 
         #update feedbacks
-        sql = "SELECT count(*) as total FROM product WHERE jsonb_array_length(feedbacks) > 0"
+        #sql = "SELECT count(*) as total FROM product WHERE jsonb_array_length(feedbacks) > 0"
+        sql = '''select count(*)  as total from(
+                        select title, url, product_id, feedbacks::json#>'{0,image}' as image, feedbacks::json#>'{0,date}' as date, category  from (
+                        select title, url, product_id, feedbacks, category from product where  jsonb_array_length(feedbacks) > 0) t1) t2 where image isnull or date isnull'''
         total = self.db._getone(sql)
         pprint('total: {total}'.format(total=total))
         LIMIT = 100
         offsets = range(0, total, LIMIT)
         for offset in offsets:
-            sql = "SELECT title, url, product_id, feedbacks, category FROM product WHERE jsonb_array_length(feedbacks) > 0  ORDER BY id OFFSET {offset} LIMIT {limit}".format(offset=offset, limit=LIMIT)
-            products = self.db._getraw(sql, ['title', 'url', 'product_id', 'feedbacks', 'category'])
+            #sql = "SELECT title, url, product_id, feedbacks, category FROM product WHERE jsonb_array_length(feedbacks) > 0  ORDER BY id OFFSET {offset} LIMIT {limit}".format(offset=offset, limit=LIMIT)
+            sql = '''select * from(
+                            select title, url, product_id, feedbacks::json#>'{0,image}' as image, feedbacks::json#>'{0,date}' as date, category  from (
+                            select title, url, product_id, feedbacks, category from product where  jsonb_array_length(feedbacks) > 0) t1) t2 where image isnull or date isnull'''
+
+            products = self.db._getraw(sql, ['title', 'url', 'product_id', 'image', 'date', 'category'])
             for product in products:
                 url = product['url']
                 request = self.getRequest(url, self.parse_product_page, request_type='headless', use_scrapestack=True)

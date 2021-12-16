@@ -1,4 +1,3 @@
-/*!50503 SET NAMES utf8 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -154,3 +153,5 @@ LOCK TABLES `tag` WRITE;
 INSERT INTO `tag` (id,name,category_id) VALUES (1,'Черная',2),(2,'Рикер',2),(3,'Отико',2),(4,'Ортомода',2),(5,'Немецкая',2),(6,'На широкую ногу ',2),(7,'На танкетке',2),(8,'На подошве ',2),(9,'На платформе',2);
 /*!40000 ALTER TABLE `tag` ENABLE KEYS */;
 UNLOCK TABLES;
+
+

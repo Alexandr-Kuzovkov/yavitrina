@@ -120,7 +120,8 @@ class ExporterSpider(scrapy.Spider):
                     related_products[product['product_id']] = product['related_products']
                 if product['feedbacks'] is not None:
                     product_prices[product['product_id']] = {'price': product['price'], 'name': product['title'], 'rating': rating, 'count_review': len(product['feedbacks'])}
-                    feedbacks[product['product_id']] = product['feedbacks']
+                    if len(product['feedbacks']) > 0:
+                        feedbacks[product['product_id']] = product['feedbacks']
             product_ids = map(lambda i: i['product_id'], buffer)
             sql = "SELECT product_id FROM product WHERE product_id IN (%s)" % ','.join(map(lambda i: "'%s'" % i, product_ids))
             exist_items = self.db_export._getraw(sql, ['product_id'], None)
@@ -248,7 +249,7 @@ class ExporterSpider(scrapy.Spider):
         self.logger.info('done')
 
     def export_review(self, feedbacks):
-        self.logger.info('export product_price')
+        self.logger.info('export review')
         product_ids = feedbacks.keys()
         LIMIT = 100
         offsets = range(0, len(product_ids), LIMIT)
@@ -263,28 +264,65 @@ class ExporterSpider(scrapy.Spider):
                     sql = "INSERT INTO review (name, dignity, flaw, grade, product_id, date, image, comment, use_experince, city) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
                     date = None
                     city = None
-                    if feedbacks[product['product_id']]['date'] is not None:
-                        parts = feedbacks[product['product_id']]['date'].split(',')
-                        date = ''.join(parts[-1:]).strip()
-                        if len(parts) > 1:
-                            city = ''.join(parts[0:1]).strip()
-                    self.db_export.cur.execute(sql, [
-                        feedbacks[product['product_id']]['name'],
-                        feedbacks[product['product_id']]['plus'],
-                        feedbacks[product['product_id']]['minus'],
-                        feedbacks[product['product_id']]['eval'],
-                        product['id'],
-                        date,
-                        feedbacks[product['product_id']]['image'],
-                        feedbacks[product['product_id']]['comment'],
-                        feedbacks[product['product_id']]['experience'],
-                        city
-                    ])
+                    for feedback in feedbacks[product['product_id']]:
+                        if feedback['date'] is not None:
+                            parts = feedback['date'].split(',')
+                            date = ''.join(parts[-1:]).strip()
+                            date = self.get_parsed_date(date)
+                            if len(parts) > 1:
+                                city = ''.join(parts[0:1]).strip()
+                        self.db_export.cur.execute(sql, [
+                            feedback['name'],
+                            feedback['plus'],
+                            feedback['minus'],
+                            feedback['eval'],
+                            product['id'],
+                            date,
+                            feedback['image'],
+                            feedback['comment'],
+                            feedback['experience'],
+                            city
+                        ])
                 self.db_export.conn.commit()
             except Exception as ex:
                 self.logger.error(ex)
         self.db_export.dbclose()
         self.logger.info('done')
+
+    def export_category(self):
+        self.logger.info('export category...')
+        latest_time = self.db_export.get_latest_time('category')
+        if latest_time is not None:
+            condition = {'created_at >=': str(latest_time)}
+        else:
+            condition = {'created_at >=': '1970-01-01'}
+        table = 'category'
+        total_categories = self.db_import.get_items_total(table, condition)
+        # pprint(total_categories)
+        LIMIT = 100
+        category_urls = {}
+        offsets = range(0, total_categories, LIMIT)
+        for offset in offsets:
+            buffer = []
+            categories = self.db_import.get_items_chunk(table, condition, offset, LIMIT)
+            for category in categories:
+                # ex_product = ItemLoader(item=ExProductItem(), response=response)
+                row = {}
+                row['name'] = category['title']
+                row['description'] = category['description']
+                row['image_path'] = category['img']
+                row['created_at'] = self.datetime2str(category['created_at'])
+                buffer.append(row)
+            category_names = map(lambda i: i['name'], buffer)
+            sql = "SELECT name FROM category WHERE name IN (%s)" % ','.join(map(lambda i: "'%s'" % i, category_names))
+            exist_items = self.db_export._getraw(sql, ['name'], None)
+            exist_category_names = map(lambda i: i['name'], exist_items)
+            filtered_buffer = filter(lambda i: i['name'] not in exist_category_names, buffer)
+            self.db_export._insert(table, filtered_buffer)
+        self.logger.info('done')
+        return {
+            'category_urls': category_urls,
+        }
 
 
     def str2datetime(self, str):
@@ -295,6 +333,32 @@ class ExporterSpider(scrapy.Spider):
 
     def datetime2str(self, dt):
         return str(dt).split('+').pop(0)
+
+    def get_parsed_date(self, str):
+        month_map = {
+            u'января': 1,
+            u'февраля': 2,
+            u'марта': 3,
+            u'апреля': 4,
+            u'мая': 5,
+            u'июня': 6,
+            u'июля': 7,
+            u'августа': 8,
+            u'сентября': 9,
+            u'октября': 10,
+            u'ноября': 11,
+            u'декабря': 12
+        }
+        parts = filter(lambda i: len(i) > 0, map(lambda i: i.strip(), str.strip().split(' ')))
+        day = int(parts[0])
+        month = month_map[parts[1]]
+        if len(parts) < 3:
+            year = datetime.datetime.now().year
+        else:
+            year = int(parts[2])
+        dt = datetime.datetime(year, month, day, 0, 0, 0, 0)
+        date = self.datetime2str(dt)
+        return date
 
     def helper(self):
         tables = self.db_export._get_tables_list()

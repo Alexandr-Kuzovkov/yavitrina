@@ -371,6 +371,7 @@ class MySQLBase(object):
         if self.conn is None:
             self.conn = connector.MySQLConnection(host=self.dbhost, user=self.dbuser, password=self.dbpass, port=self.dbport, database=self.dbname)
             self.cur = self.conn.cursor()
+            self.cur.execute('SET NAMES utf8mb4')
 
     def dbclose(self):
         if self.conn is not None:
