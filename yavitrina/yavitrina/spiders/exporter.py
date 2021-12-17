@@ -72,18 +72,19 @@ class ExporterSpider(scrapy.Spider):
 
     def starting_export(self, response):
         self.helper()
-        # data = self.export_product()
-        # self.export_product_colors(data['product_colors'])
-        # self.export_search_product(data['related_products'])
-        # self.export_product_image(data['product_colors'].keys())
-        # self.export_product_price(data['product_prices'])
-        # self.export_review(data['feedbacks'])
+        data = self.export_product()
+        self.export_product_colors(data['product_colors'])
+        self.export_search_product(data['related_products'])
+        self.export_product_image(data['product_colors'].keys())
+        self.export_product_price(data['product_prices'])
+        self.export_review(data['feedbacks'])
         category_urls = self.export_category()
         self.link_categories(category_urls)
         self.export_settings()
         self.export_settings_value()
         self.export_category_search()
         self.export_category_has_settings()
+        self.export_product_category()
 
     def export_product(self):
         self.logger.info('export product...')
@@ -456,6 +457,48 @@ class ExporterSpider(scrapy.Spider):
                         row['category_id'] = category['id']
                         buffer.append(row)
             self.db_export._insert('category_has_settings', buffer, ignore=True)
+        self.logger.info('done')
+
+    def export_product_category(self):
+        self.logger.info('export product_category...')
+        LIMIT = 1000
+        category_map = {}
+        # collecting categories
+        total_categories = self.db_export.get_items_total('category')
+        offsets = range(0, total_categories, LIMIT)
+        for offset in offsets:
+            category_part = self.db_export.get_items_chunk('category', condition=None, offset=offset, limit=LIMIT)
+            for category_item in category_part:
+                category_map[category_item['url']] = category_item['id']
+        #pprint(category_map)
+        total_products = self.db_import._getone("SELECT count(*) as total FROM product p LEFT JOIN product_card pc ON p.product_id = pc.product_id")
+        #pprint(total_products)
+        offsets = range(0, total_products, LIMIT)
+        for offset in offsets:
+            buffer = []
+            product_map = {}
+            products = self.db_import._getraw("SELECT p.id as id, category, category_id, p.product_id AS product_id, page FROM product p LEFT JOIN product_card pc ON p.product_id = pc.product_id ORDER BY id OFFSET {offset} LIMIT {limit}".format(offset=offset, limit=LIMIT), ['id', 'category', 'category_id', 'product_id', 'page'])
+            for product in products:
+                if product['category'] is not None:
+                    cat_urls = [product['category']]
+                else:
+                    cat_urls = []
+                if product['page'] is not None:
+                    cat_urls = cat_urls + product['page'].strip().split(',')
+                cat_urls = filter(lambda i: i is not None and len(i) > 0, cat_urls)
+                product_map[product['product_id']] = {'categories': cat_urls, 'id': None}
+            sql = "SELECT product_id, id FROM product WHERE product_id IN (%s)" % ','.join(map(lambda i: "'%s'" % i, product_map.keys()))
+            exist_products = self.db_export._getraw(sql, ['product_id', 'id'], None)
+            for exist_product in exist_products:
+                product_map[exist_product['product_id']]['id'] = exist_product['id']
+            for product_id, product_data in product_map.items():
+                for category_url in product_data['categories']:
+                    if category_url in category_map and product_map[product_id]['id'] is not None:
+                        row = {}
+                        row['product_id'] = product_map[product_id]['id']
+                        row['category_id'] = category_map[category_url]
+                        buffer.append(row)
+            self.db_export._insert('product_category', buffer, ignore=True)
         self.logger.info('done')
 
 
