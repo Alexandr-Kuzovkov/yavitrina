@@ -333,24 +333,32 @@ class PgSQLStore(PgSQLBase):
             self._insert('settings_value', [data])
             return None
 
-    def get_items_total(self, table, condition):
-        if type(condition) is not dict:
+    def get_items_total(self, table, condition=None):
+        if condition is not None and type(condition) is not dict:
             raise Exception('Type of the condition must be dict!')
-        cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
-        data = condition.values()
-        sql = "SELECT count(*) AS total FROM {table} WHERE {cond}".format(table=table, cond=cond)
+        if condition is not None:
+            cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
+            data = condition.values()
+            sql = "SELECT count(*) AS total FROM {table} WHERE {cond}".format(table=table, cond=cond)
+        else:
+            data = None
+            sql = "SELECT count(*) AS total FROM {table}".format(table=table)
         self.dbopen()
         res = self._getone(sql, data)
         return res
 
-    def get_items_chunk(self, table, condition, offset, limit, order='id'):
-        if type(condition) is not dict:
+    def get_items_chunk(self, table, condition=None, offset=0, limit=100, order='id'):
+        if condition is not None and type(condition) is not dict:
             raise Exception('Type of the condition must be dict!')
-        cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
-        data = condition.values()
-        sql = "SELECT * FROM {table} WHERE {cond} ORDER BY {order} OFFSET {offset} LIMIT {limit} ".format(table=table, cond=cond, order=order, limit=limit, offset=offset)
         fld_lst = self._get_fld_list(table)
-        res = self._getraw(sql, fld_lst, data)
+        if condition is not None:
+            cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
+            data = condition.values()
+            sql = "SELECT * FROM {table} WHERE {cond} ORDER BY {order} OFFSET {offset} LIMIT {limit} ".format(table=table, cond=cond, order=order, limit=limit, offset=offset)
+            res = self._getraw(sql, fld_lst, data)
+        else:
+            sql = "SELECT * FROM {table} ORDER BY {order} OFFSET {offset} LIMIT {limit} ".format(table=table, order=order, limit=limit, offset=offset)
+            res = self._getraw(sql, fld_lst)
         return res
 
 
@@ -451,9 +459,12 @@ class MySQLBase(object):
         self.dbclose()
         return res
 
-    def _getone(self, sql):
+    def _getone(self, sql, data=None):
         self.dbopen()
-        self.cur.execute(sql)
+        if data is None:
+            self.cur.execute(sql)
+        else:
+            self.cur.execute(sql, data)
         data = self.cur.fetchone()
         if data is not None and len(data) > 0:
             return data[0]
@@ -580,5 +591,33 @@ class MySQLStore(MySQLBase):
                 print(ex)
             finally:
                 self.buffer[table].append(data)
+
+    def get_items_chunk(self, table, condition=None, offset=0, limit=100, order='id'):
+        if condition is not None and type(condition) is not dict:
+            raise Exception('Type of the condition must be dict!')
+        fld_lst = self._get_fld_list(table)
+        if condition is not None:
+            cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
+            data = condition.values()
+            sql = "SELECT * FROM {table} WHERE {cond} ORDER BY {order}  LIMIT {limit} OFFSET {offset}".format(table=table, cond=cond, order=order, limit=limit, offset=offset)
+            res = self._getraw(sql, fld_lst, data)
+        else:
+            sql = "SELECT * FROM {table} ORDER BY {order} LIMIT {limit} OFFSET {offset} ".format(table=table, order=order, limit=limit, offset=offset)
+            res = self._getraw(sql, fld_lst)
+        return res
+
+    def get_items_total(self, table, condition=None):
+        if condition is not None and type(condition) is not dict:
+            raise Exception('Type of the condition must be dict!')
+        if condition is not None:
+            cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
+            data = condition.values()
+            sql = "SELECT count(*) AS total FROM {table} WHERE {cond}".format(table=table, cond=cond)
+        else:
+            data = None
+            sql = "SELECT count(*) AS total FROM {table}".format(table=table)
+        self.dbopen()
+        res = self._getone(sql, data)
+        return res
 
 

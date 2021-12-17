@@ -72,16 +72,18 @@ class ExporterSpider(scrapy.Spider):
 
     def starting_export(self, response):
         self.helper()
-        #data = self.export_product()
-        #self.export_product_colors(data['product_colors'])
-        #self.export_search_product(data['related_products'])
-        #self.export_product_image(data['product_colors'].keys())
-        #self.export_product_price(data['product_prices'])
-        #self.export_review(data['feedbacks'])
+        # data = self.export_product()
+        # self.export_product_colors(data['product_colors'])
+        # self.export_search_product(data['related_products'])
+        # self.export_product_image(data['product_colors'].keys())
+        # self.export_product_price(data['product_prices'])
+        # self.export_review(data['feedbacks'])
         category_urls = self.export_category()
         self.link_categories(category_urls)
         self.export_settings()
         self.export_settings_value()
+        self.export_category_search()
+        self.export_category_has_settings()
 
     def export_product(self):
         self.logger.info('export product...')
@@ -125,12 +127,12 @@ class ExporterSpider(scrapy.Spider):
                     product_prices[product['product_id']] = {'price': product['price'], 'name': product['title'], 'rating': rating, 'count_review': len(product['feedbacks'])}
                     if len(product['feedbacks']) > 0:
                         feedbacks[product['product_id']] = product['feedbacks']
-            product_ids = map(lambda i: i['product_id'], buffer)
-            sql = "SELECT product_id FROM product WHERE product_id IN (%s)" % ','.join(map(lambda i: "'%s'" % i, product_ids))
-            exist_items = self.db_export._getraw(sql, ['product_id'], None)
-            exist_product_ids = map(lambda i: i['product_id'], exist_items)
-            filtered_buffer = filter(lambda i: i['product_id'] not in exist_product_ids, buffer)
-            self.db_export._insert(table, filtered_buffer)
+            # product_ids = map(lambda i: i['product_id'], buffer)
+            # sql = "SELECT product_id FROM product WHERE product_id IN (%s)" % ','.join(map(lambda i: "'%s'" % i, product_ids))
+            # exist_items = self.db_export._getraw(sql, ['product_id'], None)
+            # exist_product_ids = map(lambda i: i['product_id'], exist_items)
+            # filtered_buffer = filter(lambda i: i['product_id'] not in exist_product_ids, buffer)
+            self.db_export._insert(table, buffer, ignore=True)
         self.logger.info('done')
         return {
             'product_colors': product_colors,
@@ -317,12 +319,7 @@ class ExporterSpider(scrapy.Spider):
                 row['created_at'] = self.datetime2str(category['created_at'])
                 buffer.append(row)
                 category_urls[category['url']] = {'parent_url': category['parent_url']}
-            urls = map(lambda i: i['url'], buffer)
-            sql = "SELECT url FROM category WHERE url IN (%s)" % ','.join(map(lambda i: "'%s'" % i, urls))
-            exist_items = self.db_export._getraw(sql, ['url'], None)
-            exist_urls = map(lambda i: i['url'], exist_items)
-            filtered_buffer = filter(lambda i: i['url'] not in exist_urls, buffer)
-            self.db_export._insert(table, filtered_buffer)
+            self.db_export._insert(table, buffer, ignore=True)
         self.logger.info('done')
         return category_urls
 
@@ -354,7 +351,7 @@ class ExporterSpider(scrapy.Spider):
     def export_settings(self):
         self.logger.info('export settings...')
         table = 'settings'
-        total_settings = self.db_import._getone("SELECT count(*) AS total FROM settings")
+        total_settings = self.db_import.get_items_total('settings')
         # pprint(total_settings)
         LIMIT = 100
         settings_urls = {}
@@ -370,8 +367,95 @@ class ExporterSpider(scrapy.Spider):
             self.db_export._insert(table, buffer, ignore=True)
         self.logger.info('done')
 
+    def export_category_search(self):
+        self.logger.info('export category_search...')
+        latest_time = self.db_export.get_latest_time('category_search')
+        if latest_time is not None:
+            condition = {'created_at >=': str(latest_time)}
+        else:
+            condition = {'created_at >=': '1970-01-01'}
+        table = 'search_tag'
+        total_search_tag = self.db_import.get_items_total(table, condition)
+        LIMIT = 100
+        offsets = range(0, total_search_tag, LIMIT)
+        for offset in offsets:
+            buffer = []
+            search_tags = self.db_import.get_items_chunk(table, condition, offset, LIMIT)
+            for search_tag in search_tags:
+                row = {}
+                category_id = self.db_export._getone("SELECT id FROM category WHERE url='{url}'".format(url=search_tag['page']))
+                child_id = self.db_export._getone("SELECT id FROM category WHERE url='{url}'".format(url=search_tag['url']))
+                if (category_id is not None and child_id is not None):
+                    row['child_id'] = child_id
+                    row['category_id'] = category_id
+                    row['created_at'] = self.datetime2str(search_tag['created_at'])
+                    buffer.append(row)
+            self.db_export._insert('category_search', buffer, ignore=True)
+        self.logger.info('done')
+
     def export_settings_value(self):
         self.logger.info('export settings_value...')
+        table = 'settings_value'
+        LIMIT = 500
+        settings_map = {}
+        #collecting settings
+        total_settings = self.db_export.get_items_total('settings')
+        offsets = range(0, total_settings, LIMIT)
+        for offset in offsets:
+            settings_part = self.db_export.get_items_chunk('settings', condition=None, offset=offset, limit=LIMIT)
+            for settings_item in settings_part:
+                if settings_item['url'] in settings_map:
+                    settings_map[settings_item['url']].append(settings_item)
+                else:
+                    settings_map[settings_item['url']] = [settings_item]
+        total_settings_value = self.db_import.get_items_total('settings_value')
+        # pprint(total_settings_value)
+        offsets = range(0, total_settings_value, LIMIT)
+        for offset in offsets:
+            buffer = []
+            settings_values = self.db_import.get_items_chunk(table, condition=None, offset=offset, limit=LIMIT)
+            for setting_value in settings_values:
+                res = filter(lambda i: i['url'] == setting_value['url'] and i['name'] == setting_value['settings_name'].decode('utf-8'), settings_map[setting_value['url']])
+                if len(res) > 0:
+                    for item in res:
+                        row = {}
+                        row['settings_id'] = item['id']
+                        row['value'] = setting_value['value']
+                        buffer.append(row)
+            self.db_export._insert('settings_value', buffer, ignore=True)
+        self.logger.info('done')
+
+    def export_category_has_settings(self):
+        self.logger.info('export category_has_settings...')
+        LIMIT = 500
+        settings_map = {}
+        # collecting settings
+        total_settings = self.db_export.get_items_total('settings')
+        offsets = range(0, total_settings, LIMIT)
+        for offset in offsets:
+            settings_part = self.db_export.get_items_chunk('settings', condition=None, offset=offset, limit=LIMIT)
+            for settings_item in settings_part:
+                if settings_item['url'] in settings_map:
+                    settings_map[settings_item['url']].append(settings_item)
+                else:
+                    settings_map[settings_item['url']] = [settings_item]
+        total_categories = self.db_export.get_items_total('category')
+        # pprint(total_categories)
+        offsets = range(0, total_categories, LIMIT)
+        for offset in offsets:
+            buffer = []
+            categories = self.db_export.get_items_chunk('category', condition=None, offset=offset, limit=LIMIT)
+            for category in categories:
+                if category['url'] not in settings_map:
+                    continue
+                res = filter(lambda i: i['url'] == category['url'], settings_map[category['url']])
+                if len(res) > 0:
+                    for item in res:
+                        row = {}
+                        row['settings_id'] = item['id']
+                        row['category_id'] = category['id']
+                        buffer.append(row)
+            self.db_export._insert('category_has_settings', buffer, ignore=True)
         self.logger.info('done')
 
 

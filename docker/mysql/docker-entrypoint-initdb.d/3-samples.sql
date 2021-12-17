@@ -98,7 +98,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `product_image` WRITE;
 /*!40000 ALTER TABLE `product_image` DISABLE KEYS */;
-INSERT INTO `product_image` (id,path,type,product_id) VALUES (1,'D:\\images','main',1),(2,'D:\\images','child',1);
+INSERT INTO `product_image` (id,path,type,product_id) VALUES (1,'D:\\images1','main',1),(2,'D:\\images2','child',1);
 /*!40000 ALTER TABLE `product_image` ENABLE KEYS */;
 UNLOCK TABLES;
 

@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS `product` (
   `rate` VARCHAR(255) DEFAULT NULL,
   PRIMARY KEY (`id`))
 ENGINE = InnoDB;
+CREATE UNIQUE INDEX uidx_product
+ON product (product_id);
 
 -- -----------------------------------------------------
 -- Table `dynamic_price`
@@ -71,7 +73,8 @@ CREATE TABLE IF NOT EXISTS `product_color` (
     ON UPDATE NO ACTION)
 ENGINE = InnoDB
 COMMENT = 'таблица цветов продукта';
-
+CREATE UNIQUE INDEX uidx_product_color
+ON product_color (hex,product_id);
 
 -- -----------------------------------------------------
 -- Table `search_product`
@@ -97,7 +100,8 @@ CREATE TABLE IF NOT EXISTS `search_product` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
-
+CREATE UNIQUE INDEX uidx_search_product
+ON search_product (product_id,child_id);
 
 -- -----------------------------------------------------
 -- Table `product_image`
@@ -106,7 +110,7 @@ DROP TABLE IF EXISTS `product_image` ;
 
 CREATE TABLE IF NOT EXISTS `product_image` (
   `id` INT NOT NULL AUTO_INCREMENT,
-  `path` TEXT NULL DEFAULT NULL,
+  `path` VARCHAR(255) NULL DEFAULT NULL,
   `type` ENUM('main', 'child') NULL DEFAULT NULL,
   `product_id` INT NULL DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT now(),
@@ -118,7 +122,8 @@ CREATE TABLE IF NOT EXISTS `product_image` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
-
+CREATE UNIQUE INDEX uidx_product_image
+ON product_image (path,product_id);
 
 -- -----------------------------------------------------
 -- Table `product_price`
@@ -143,7 +148,8 @@ CREATE TABLE IF NOT EXISTS `product_price` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
-
+CREATE UNIQUE INDEX uidx_product_price
+ON product_price (price,product_id);
 
 -- -----------------------------------------------------
 -- Table `review`
@@ -188,6 +194,8 @@ CREATE TABLE IF NOT EXISTS `category` (
   `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`))
 ENGINE = InnoDB;
+CREATE UNIQUE INDEX uidx_category
+ON category (name,url);
 
 
 -- -----------------------------------------------------
@@ -214,6 +222,8 @@ CREATE TABLE IF NOT EXISTS `category_search` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
+CREATE UNIQUE INDEX uidx_category_search
+ON category_search (child_id,category_id);
 
 
 -- -----------------------------------------------------
@@ -240,6 +250,8 @@ CREATE TABLE IF NOT EXISTS `product_category` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
+CREATE UNIQUE INDEX uidx_product_category
+ON product_category (product_id,category_id);
 
 
 -- -----------------------------------------------------
@@ -260,7 +272,8 @@ CREATE TABLE IF NOT EXISTS `tag` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
-
+CREATE UNIQUE INDEX uidx_tag
+ON tag (name,category_id);
 
 -- -----------------------------------------------------
 -- Table `settings`
@@ -285,7 +298,7 @@ DROP TABLE IF EXISTS `settings_value` ;
 CREATE TABLE IF NOT EXISTS `settings_value` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `settings_id` INT NULL DEFAULT NULL,
-  `value` TEXT NULL DEFAULT NULL,
+  `value` VARCHAR(255) NULL DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`),
   INDEX `settings_idx` (`settings_id` ASC) ,
@@ -295,6 +308,8 @@ CREATE TABLE IF NOT EXISTS `settings_value` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
+CREATE UNIQUE INDEX uidx_settings_value
+ON settings_value (settings_id,value);
 
 
 -- -----------------------------------------------------
@@ -328,6 +343,8 @@ CREATE TABLE IF NOT EXISTS `product_settings` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
+CREATE UNIQUE INDEX uidx_product_settings
+ON product_settings (product_id,settings_id,settings_value_id);
 
 
 -- -----------------------------------------------------
@@ -354,7 +371,8 @@ CREATE TABLE IF NOT EXISTS `new_category` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
-
+CREATE UNIQUE INDEX uidx_new_category
+ON new_category (category_id,new_category_id);
 
 -- -----------------------------------------------------
 -- Table `category_has_settings`
@@ -380,6 +398,8 @@ CREATE TABLE IF NOT EXISTS `category_has_settings` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
+CREATE UNIQUE INDEX uidx_category_has_settings
+ON category_has_settings (settings_id,category_id);
 
 
 SET SQL_MODE=@OLD_SQL_MODE;
