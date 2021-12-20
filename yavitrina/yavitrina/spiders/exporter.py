@@ -73,18 +73,22 @@ class ExporterSpider(scrapy.Spider):
     def starting_export(self, response):
         self.helper()
         data = self.export_product()
-        self.export_product_colors(data['product_colors'])
-        self.export_search_product(data['related_products'])
-        self.export_product_image(data['product_colors'].keys())
-        self.export_product_price(data['product_prices'])
-        self.export_review(data['feedbacks'])
-        category_urls = self.export_category()
-        self.link_categories(category_urls)
+        #self.export_product_colors(data['product_colors'])
+        # self.export_search_product(data['related_products'])
+        # self.export_product_image(data['product_colors'].keys())
+        # self.export_product_price(data['product_prices'])
+        # self.export_review(data['feedbacks'])
+        #category_urls = self.export_category()
+        #self.link_categories(category_urls)
+        #self.link_categories(category_urls)
         self.export_settings()
         self.export_settings_value()
-        self.export_category_search()
-        self.export_category_has_settings()
-        self.export_product_category()
+        # self.export_category_search()
+        # self.export_category_has_settings()
+        # self.export_product_category()
+        #self.export_tag()
+        #self.export_new_category()
+        self.export_product_settings(data['parameters'])
 
     def export_product(self):
         self.logger.info('export product...')
@@ -101,6 +105,7 @@ class ExporterSpider(scrapy.Spider):
         related_products = {}
         product_prices = {}
         feedbacks = {}
+        parameters = {}
         offsets = range(0, total_products, LIMIT)
         for offset in offsets:
             buffer = []
@@ -128,6 +133,8 @@ class ExporterSpider(scrapy.Spider):
                     product_prices[product['product_id']] = {'price': product['price'], 'name': product['title'], 'rating': rating, 'count_review': len(product['feedbacks'])}
                     if len(product['feedbacks']) > 0:
                         feedbacks[product['product_id']] = product['feedbacks']
+                if product['parameters'] is not None and len(product['parameters']) > 0:
+                    parameters[product['product_id']] = product['parameters']
             # product_ids = map(lambda i: i['product_id'], buffer)
             # sql = "SELECT product_id FROM product WHERE product_id IN (%s)" % ','.join(map(lambda i: "'%s'" % i, product_ids))
             # exist_items = self.db_export._getraw(sql, ['product_id'], None)
@@ -139,7 +146,8 @@ class ExporterSpider(scrapy.Spider):
             'product_colors': product_colors,
             'related_products': related_products,
             'product_prices': product_prices,
-            'feedbacks': feedbacks
+            'feedbacks': feedbacks,
+            'parameters': parameters
         }
 
     def export_product_colors(self, product_colors):
@@ -501,6 +509,90 @@ class ExporterSpider(scrapy.Spider):
             self.db_export._insert('product_category', buffer, ignore=True)
         self.logger.info('done')
 
+    def export_tag(self):
+        self.logger.info('export tag...')
+        LIMIT = 1000
+        category_map = {}
+        # collecting categories
+        total_categories = self.db_export.get_items_total('category')
+        offsets = range(0, total_categories, LIMIT)
+        for offset in offsets:
+            category_part = self.db_export.get_items_chunk('category', condition=None, offset=offset, limit=LIMIT)
+            for category_item in category_part:
+                category_map[category_item['url']] = category_item['id']
+        # pprint(category_map)
+        total_tags = self.db_import.get_items_total('tag')
+        # pprint(total_tags)
+        offsets = range(0, total_tags, LIMIT)
+        for offset in offsets:
+            tags = self.db_import.get_items_chunk('tag', condition=None, offset=offset, limit=LIMIT)
+            buffer = []
+            self.db_export.dbopen()
+            for tag in tags:
+                #category id указывает на категорию страницы на которой отображается этот тег
+                if tag['page'] is not None and tag['page'] in category_map:
+                    category_id = category_map[tag['page']]
+                else:
+                    category_id = None
+                sql = "INSERT INTO tag (name, category_id) VALUES (%s,%s) ON DUPLICATE KEY UPDATE category_id=%s"
+                self.db_export.cur.execute(sql, [tag['title'], category_id, category_id])
+            self.db_export.conn.commit()
+        self.logger.info('done')
+
+    def export_new_category(self):
+        self.logger.info('export new category...')
+        LIMIT = 1000
+        category_map = {}
+        # collecting categories
+        total_categories = self.db_export.get_items_total('category')
+        offsets = range(0, total_categories, LIMIT)
+        for offset in offsets:
+            category_part = self.db_export.get_items_chunk('category', condition=None, offset=offset, limit=LIMIT)
+            for category_item in category_part:
+                category_map[category_item['url']] = category_item['id']
+        # pprint(category_map)
+        total_category_tags = self.db_import.get_items_total('category_tag')
+        # pprint(total_category_tags)
+        offsets = range(0, total_category_tags, LIMIT)
+        for offset in offsets:
+            category_tags = self.db_import.get_items_chunk('category_tag', condition=None, offset=offset, limit=LIMIT)
+            buffer = []
+            for category_tag in category_tags:
+                if category_tag['page'] in category_map and category_tag['url'] in category_map:
+                    row = {}
+                    row['category_id'] = category_map[category_tag['page']]
+                    row['new_category_id'] = category_map[category_tag['url']]
+                    buffer.append(row)
+            self.db_export._insert('new_category', buffer, ignore=True)
+        self.logger.info('done')
+
+    def export_product_settings(self, parameters):
+        self.logger.info('export product_settings...')
+        #pprint(len(parameters))
+        product_ids = parameters.keys()
+        LIMIT = 100
+        offsets = range(0, len(product_ids), LIMIT)
+        for offset in offsets:
+            part_ids = product_ids[offset:offset + LIMIT]
+            sql = "SELECT id, product_id, url FROM product WHERE product_id IN (%s)" % ','.join(map(lambda i: "'%s'" % i, part_ids))
+            products = self.db_export._getraw(sql, ['id', 'product_id', 'url'], None)
+            buffer = []
+            for product in products:
+                if product['product_id'] in parameters:
+                    parameters = parameters[product['product_id']]
+                    for key, value in parameters.items():
+                        settings_id = self.db_export._getone("SELECT id FROM settings WHERE name=%s LIMIT 1", [key.strip()])
+                        if settings_id is None:
+                            continue
+                        settings_value_id = self.db_export._getone("SELECT id FROM settings_value WHERE value=%s AND settings_id=%s LIMIT 1", [value.strip(), settings_id])
+                        if settings_value_id is not None:
+                            row = {}
+                            row['settings_id'] = settings_id
+                            row['settings_value_id'] = settings_value_id
+                            row['product_id'] = product['id']
+                            buffer.append(row)
+            self.db_export._insert('product_settings', buffer, ignore=True)
+        self.logger.info('done')
 
     def str2datetime(self, str):
         d = map(lambda i: int(i), str.split(' ')[0].split('-'))

@@ -273,7 +273,7 @@ CREATE TABLE IF NOT EXISTS `tag` (
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 CREATE UNIQUE INDEX uidx_tag
-ON tag (name,category_id);
+ON tag (name);
 
 -- -----------------------------------------------------
 -- Table `settings`
