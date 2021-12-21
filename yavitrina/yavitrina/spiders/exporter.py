@@ -12,36 +12,6 @@ import time
 import html2text
 import datetime
 import logging
-import urllib
-import urlparse
-import requests
-from yavitrina.items import CategoryItem
-from yavitrina.items import TagItem
-from yavitrina.items import ProductCardItem
-from yavitrina.items import ProductItem
-from yavitrina.items import ImageItem
-from yavitrina.scrapestack import ScrapestackRequest
-from yavitrina.seleniumrequest import SelenuimRequest
-from scrapy_headless import HeadlessRequest
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from urllib import urlencode
-from yavitrina.items import SettingItem
-from yavitrina.items import SettingValueItem
-from yavitrina.items import ExSettingItem
-from yavitrina.items import ExSettingValueItem
-from yavitrina.items import ExProductItem
-from yavitrina.items import ExProductColorItem
-from yavitrina.items import ExSearchProductItem
-from yavitrina.items import ExProductImageItem
-from yavitrina.items import ExProductPriceItem
-from yavitrina.items import ExReviewItem
-from yavitrina.items import ExCategoryItem
-from yavitrina.items import ExCategorySearchItem
-from yavitrina.items import ExProductCategoryItem
-from yavitrina.items import ExTagItem
-from yavitrina.items import ExProductSettingsItem
-from yavitrina.items import ExNewCategoryItem
-from yavitrina.items import ExCategoryHasSettingsItem
 
 
 class ExporterSpider(scrapy.Spider):
@@ -73,22 +43,22 @@ class ExporterSpider(scrapy.Spider):
     def starting_export(self, response):
         self.helper()
         data = self.export_product()
-        #self.export_product_colors(data['product_colors'])
-        # self.export_search_product(data['related_products'])
-        # self.export_product_image(data['product_colors'].keys())
-        # self.export_product_price(data['product_prices'])
-        # self.export_review(data['feedbacks'])
-        #category_urls = self.export_category()
-        #self.link_categories(category_urls)
-        #self.link_categories(category_urls)
+        self.export_product_colors(data['product_colors'])
+        self.export_search_product(data['related_products'])
+        self.export_product_image(data['product_colors'].keys())
+        self.export_product_price(data['product_prices'])
+        self.export_review(data['feedbacks'])
+        category_urls = self.export_category()
+        self.link_categories(category_urls)
+        self.link_categories(category_urls)
         self.export_settings()
         self.export_settings_value()
-        # self.export_category_search()
-        # self.export_category_has_settings()
-        # self.export_product_category()
-        #self.export_tag()
-        #self.export_new_category()
-        self.export_product_settings(data['parameters'])
+        self.export_category_search()
+        self.export_category_has_settings()
+        self.export_product_category()
+        self.export_tag()
+        self.export_new_category()
+        self.export_product_settings()
 
     def export_product(self):
         self.logger.info('export product...')
@@ -566,20 +536,31 @@ class ExporterSpider(scrapy.Spider):
             self.db_export._insert('new_category', buffer, ignore=True)
         self.logger.info('done')
 
-    def export_product_settings(self, parameters):
+    def export_product_settings(self):
         self.logger.info('export product_settings...')
-        #pprint(len(parameters))
-        product_ids = parameters.keys()
-        LIMIT = 100
+        #pprint(len(parameters_map))
+        LIMIT = 500
+        parameters_map = {}
+        sql = "SELECT count(*) AS total FROM (SELECT title, url, product_id, parameters, (SELECT count(*) FROM jsonb_object_keys(parameters)) AS params_count FROM product)t1 WHERE params_count > 0"
+        total_jobs = self.db_import._getone(sql)
+        offsets = range(0, total_jobs, LIMIT)
+        # collect parameters_map
+        for offset in offsets:
+            sql = "SELECT id, title, url, product_id, parameters FROM(SELECT id, title, url, product_id, parameters, (SELECT count(*) FROM jsonb_object_keys(parameters)) AS params_count FROM product)t1 WHERE params_count > 0 OFFSET {offset} LIMIT {limit}".format(offset=offset, limit=LIMIT)
+            products = self.db_import._getraw(sql, ['id', 'title', 'url', 'product_id', 'parameters'])
+            for product in products:
+                parameters_map[product['product_id']] = product['parameters']
+        # pprint(parameters_map)
+        product_ids = parameters_map.keys()
         offsets = range(0, len(product_ids), LIMIT)
         for offset in offsets:
             part_ids = product_ids[offset:offset + LIMIT]
             sql = "SELECT id, product_id, url FROM product WHERE product_id IN (%s)" % ','.join(map(lambda i: "'%s'" % i, part_ids))
-            products = self.db_export._getraw(sql, ['id', 'product_id', 'url'], None)
+            exists_products = self.db_export._getraw(sql, ['id', 'product_id', 'url'], None)
             buffer = []
-            for product in products:
-                if product['product_id'] in parameters:
-                    parameters = parameters[product['product_id']]
+            for exists_product in exists_products:
+                if exists_product['product_id'] in parameters_map:
+                    parameters = parameters_map[exists_product['product_id']]
                     for key, value in parameters.items():
                         settings_id = self.db_export._getone("SELECT id FROM settings WHERE name=%s LIMIT 1", [key.strip()])
                         if settings_id is None:
@@ -589,7 +570,7 @@ class ExporterSpider(scrapy.Spider):
                             row = {}
                             row['settings_id'] = settings_id
                             row['settings_value_id'] = settings_value_id
-                            row['product_id'] = product['id']
+                            row['product_id'] = exists_product['id']
                             buffer.append(row)
             self.db_export._insert('product_settings', buffer, ignore=True)
         self.logger.info('done')
@@ -635,10 +616,6 @@ class ExporterSpider(scrapy.Spider):
         for table in tables:
             fld_lst = self.db_export._get_fld_list(table)
             print('{table}: ({columns})'.format(table=table, columns=','.join(fld_lst)))
-        # condition = {'created_at >=': '1970-01-01'}
-        # table = 'product'
-        # products = self.db_import.get_items_chunk(table, condition, 0, 100)
-        # pprint(map(lambda i: len(i['feedbacks']), products))
 
 
 

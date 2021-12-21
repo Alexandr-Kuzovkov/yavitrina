@@ -35,24 +35,6 @@ from yavitrina.extensions import PgSQLStore
 from yavitrina.extensions import MySQLStore
 from yavitrina.items import SettingItem
 from yavitrina.items import SettingValueItem
-from yavitrina.items import ExSettingItem
-from yavitrina.items import ExSettingValueItem
-from yavitrina.items import ExProductItem
-from yavitrina.items import ExProductColorItem
-from yavitrina.items import ExSearchProductItem
-from yavitrina.items import ExProductImageItem
-from yavitrina.items import ExProductPriceItem
-from yavitrina.items import ExReviewItem
-from yavitrina.items import ExCategoryItem
-from yavitrina.items import ExCategorySearchItem
-from yavitrina.items import ExProductCategoryItem
-from yavitrina.items import ExTagItem
-from yavitrina.items import ExProductSettingsItem
-from yavitrina.items import ExNewCategoryItem
-from yavitrina.items import ExCategoryHasSettingsItem
-
-
-
 
 def create_folder(directory):
     logger.debug('Create directory. "%s"' % directory)
@@ -579,26 +561,7 @@ class YavitrinaDatabaseExporter(object):
     def export_item(self, item):
         entity = None
         res = None
-        if isinstance(item, ExProductItem):
-            logging.debug('saving product item')
-            entity = 'product'
-            res = self.save_product(item)
-
-
-    def save_product(self, item):
-        data = {}
-        mapping = {}
-        for key, val in item.items():
-            if key in mapping:
-                key = mapping[key]
-            if type(val) is list:
-                try:
-                    data[key] = u','.join(map(lambda i: unicode(i), val))
-                except UnicodeDecodeError as ex:
-                    data[key] = ','.join(map(lambda i: i, val))
-            else:
-                data[key] = val
-        self.db_export.save_product(data)
+        return item
 
 
 
