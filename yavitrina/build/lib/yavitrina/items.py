@@ -76,8 +76,10 @@ class ImageItem(scrapy.Item):
 class SettingItem(scrapy.Item):
     name = scrapy.Field()
     url = scrapy.Field()
+    created_at = scrapy.Field()
 
 class SettingValueItem(scrapy.Item):
     settings_name = scrapy.Field()
     value = scrapy.Field()
     url = scrapy.Field()
+    created_at = scrapy.Field()
