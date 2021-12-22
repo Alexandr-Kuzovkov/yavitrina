@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content_header %}
+<h1>Vitrina Stats</h1>
+{% endblock %}
+{% block content_body %}
+
+<div class="box">
+    <div class="box-header">
+        <h3 class="box-title">Site database statistic</h3>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body table-responsive">
+        <table class="table table-striped">
+            <tr>
+                <th style="width: 60px">Table name</th>
+                <th style="width: 150px">Total rows</th>
+                <th style="width: 150px">Last update</th>
+            </tr>
+            {% for table in tables %}
+            <tr>
+                <td>{{ table }}</td>
+                <td id="{{ table }}-total"><img src="/static/img/preload-small.gif"/></td>
+                <td id="{{ table }}-last"><img src="/static/img/preload-small.gif"/></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+
+<script>
+    (function () {
+        function onLoad(){
+            var tables = {{ json.dumps(tables) | safe}}
+            for (var i=0; i < tables.length; i++){
+               getStatForTable(tables[i]);
+            }
+        }
+
+
+        function getStatForTable(table) {
+            var el1 = document.getElementById(`${table}-total`);
+            var el2 = document.getElementById(`${table}-last`);
+            jQuery.get(`/vitrina/ajax/stat_mysql_for_table/${table}`, function (data) {
+                console.log(data, typeof data);
+                try{
+                    data = JSON.parse(data)
+                }catch (e){
+                    console.log(e, data)
+                }
+
+                if (typeof data == 'object' && data.msg){
+                    el1.innerHTML = data.msg;
+                    el2.innerHTML = data.msg;
+                }else if(typeof data == 'object'){
+                    el1.innerHTML = data.total;
+                    el2.innerHTML = data.last;
+                } else {
+                    el1.innerHTML = data.total;
+                    el2.innerHTML = data.last;
+                }
+            }).fail(function() {
+                el1.innerHTML = 'error';
+                el2.innerHTML = 'error';
+              })
+        }
+
+        window.addEventListener('load', onLoad);
+    })();
+
+</script>
+{% endblock %}

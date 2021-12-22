@@ -21,3 +21,4 @@ spiderkeeper
 elasticsearch
 configparser
 psycopg2
+mysql-connector
