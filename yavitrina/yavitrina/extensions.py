@@ -485,7 +485,7 @@ class MySQLBase(object):
             try:
                 values = map(lambda val: self._serialise_dict(val), row.values())
                 self.cur.execute(sql, values)
-            except psycopg2.Error, ex:
+            except Exception as ex:
                 self.conn.rollback()
                 self.dbclose()
                 print ex
@@ -514,7 +514,7 @@ class MySQLBase(object):
         values = map(lambda val: self._serialise_dict(val), data.values()) + map(lambda val: self._serialise_dict(val), cond.values())
         try:
             self.cur.execute(sql, values)
-        except psycopg2.Error, ex:
+        except Exception as ex:
             self.conn.rollback()
             self.dbclose()
             print ex

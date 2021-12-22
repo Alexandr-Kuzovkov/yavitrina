@@ -1,4 +1,5 @@
 from SpiderKeeper.app.vitrina.pg import PgSQLStore
+from SpiderKeeper.app.vitrina.my import MySQLStore
 from SpiderKeeper.app.vitrina.settings import load_config
 from SpiderKeeper.app.vitrina.constants import *
 import elasticsearch as elastic
@@ -16,6 +17,16 @@ db_conf = {
     'dbpass': config['DATABASE']['DB_PASS']
 }
 db = PgSQLStore(db_conf)
+
+mysql_db_conf = {
+    'dbname': config['MYSQL']['DB_NAME'],
+    'dbuser': config['MYSQL']['DB_USER'],
+    'dbhost': config['MYSQL']['DB_HOST'],
+    'dbport': config['MYSQL']['DB_PORT'],
+    'dbpass': config['MYSQL']['DB_PASS']
+}
+
+mysql_db = MySQLStore(mysql_db_conf)
 
 def get_dates():
     dates = []
@@ -38,3 +49,8 @@ def get_stat():
 def get_count_for_date(datestr, entity):
     return db.get_count_for_date(datestr, entity)
 
+def get_stat_mysql_table(table):
+    return mysql_db.get_stat(table)
+
+def get_tables():
+    return mysql_db._get_tables_list()

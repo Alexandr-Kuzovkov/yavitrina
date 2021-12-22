@@ -17,7 +17,7 @@ from functools import wraps
 
 from SpiderKeeper.app import db, api, agent, app, config
 from SpiderKeeper.app.spider.model import JobInstance, Project, JobExecution, SpiderInstance, JobRunType, Option
-from SpiderKeeper.app.vitrina.helper import get_dates, get_stat, get_count_for_date
+from SpiderKeeper.app.vitrina.helper import get_dates, get_stat, get_count_for_date, get_stat_mysql_table, get_tables
 from SpiderKeeper.app.spider.helper import is_spider_duplicate, options_types
 from pprint import pprint
 api_spider_bp = Blueprint('spider', __name__)
@@ -742,6 +742,17 @@ def options_page():
             Option.set_option(option)
     options = Option.get_options()
     return render_template("options.html", options=options, options_types=options_types, Option=Option)
+
+@app.route("/vitrina/my-stats")
+def mysql_stats():
+    tables = get_tables()
+    return render_template("vitrina_stats_mysql_ajax.html", tables=tables, json=json)
+
+@app.route("/vitrina/ajax/stat_mysql_for_table/<table>")
+def mysql_stat_table(table):
+    stat = get_stat_mysql_table(table)
+    return json.dumps(stat)
+
 
 '''
 @app.route("/fibois/ajax/get_options")
