@@ -1,6 +1,7 @@
 import datetime
 from sqlalchemy import desc
 from SpiderKeeper.app import db, Base
+import json
 
 
 class Project(Base):
@@ -212,3 +213,72 @@ class JobExecution(Base):
             hour_key = job_execution.create_time.strftime('%Y-%m-%d %H:00:00')
             result[hour_key] += 1
         return [dict(key=hour_key, value=result[hour_key]) for hour_key in hour_keys]
+
+
+class Option(Base):
+
+    __tablename__ = 'sk_options'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    option_name = db.Column(db.String(255), nullable=False, index=True, unique=True)
+    option_value = db.Column(db.String(255), nullable=False)
+    option_desc = db.Column(db.Text)
+
+    def __init__(self, **kwargs):
+        super(Option, self).__init__(**kwargs)
+        # set default options
+
+    def to_dict(self):
+        option = Option.query.filter_by(id=self.option_name).first()
+        return {
+            'name': self.option_name,
+            'value': self.option_value,
+            'description': self.option_desc,
+            'option': option.to_dict() if option else {}
+        }
+
+    @classmethod
+    def get_option_value(cls, option_name, type='STRING'):
+        option = cls.query.filter_by(option_name=option_name).first()
+        if option is None:
+            return None
+        if type == 'INTEGER':
+            return int(option.option_value)
+        elif type == 'STRING':
+            return option.option_value
+        elif type == 'FLOAT':
+            return float(option.option_value)
+        elif type == 'JSON':
+            return json.loads(option.option_value)
+        elif type == 'LIST':
+            return list(filter(lambda i: len(i) > 0, option.option_value.strip().split(',')))
+        elif type == 'BOOLEAN':
+            try:
+                if int(option.option_value) > 0:
+                    return True
+            except Exception as ex:
+                pass
+            return False
+        else:
+            return option.option_value
+
+    @classmethod
+    def get_option(cls, option_name):
+        option = cls.query.filter_by(option_name=option_name).first()
+        return option
+
+    @classmethod
+    def get_options(cls):
+        options = cls.query.all()
+        return options
+
+    @classmethod
+    def set_option(cls, option):
+        exists_option = cls.query.filter_by(option_name=option.option_name).first()
+        if exists_option is None:
+            db.session.add(option)
+            db.session.commit()
+        else:
+            exists_option.option_value = str(option.option_value).strip()
+            exists_option.option_desc = str(option.option_desc).strip()
+            db.session.commit()

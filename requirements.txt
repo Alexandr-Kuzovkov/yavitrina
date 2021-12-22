@@ -20,7 +20,7 @@ PyMySQL==0.7.11
 python-dateutil==2.6.0
 pytz==2017.2
 requests==2.13.0
-SQLAlchemy==1.1.9
+SQLAlchemy==1.3.0
 tzlocal==1.3
 transliterate
 zeep
@@ -35,5 +35,6 @@ langdetect
 elasticsearch
 datetime
 configparser
+mysql-connector
 
 

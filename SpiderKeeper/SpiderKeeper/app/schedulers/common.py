@@ -3,6 +3,7 @@ import time
 
 from SpiderKeeper.app import scheduler, app, agent, db
 from SpiderKeeper.app.spider.model import Project, JobInstance, SpiderInstance
+from SpiderKeeper.app.spider.helper import is_spider_duplicate
 
 
 def sync_job_execution_status_job():
@@ -34,6 +35,10 @@ def run_spider_job(job_instance_id):
     '''
     try:
         job_instance = JobInstance.find_job_instance_by_id(job_instance_id)
+        # check duplicate
+        if is_spider_duplicate(job_instance):
+            app.logger.info('!!!Prevent run duplicate of job!!!')
+            return None
         agent.start_spider(job_instance)
         app.logger.info('[run_spider_job][project:%s][spider_name:%s][job_instance_id:%s]' % (
             job_instance.project_id, job_instance.spider_name, job_instance.id))

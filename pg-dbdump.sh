@@ -5,10 +5,12 @@
 ##############################
 
 DB_USER=vitrina
-DB_PASS=foBCKFduY5
+DB_PASS=password
 DB_NAME=vitrina
 DUMP_NAME=dump.sql.gz
 MAX_STORE_DAYS=30
+eval $(cat .env)
+DB_PASS=$PG_DB_PASS
 
 
 case "$1" in

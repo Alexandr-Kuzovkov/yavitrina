@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content_header %}
+<h1>Options</h1>
+{% endblock %}
+{% block content_body %}
+<div class="box">
+    <div class="box-header">
+        <h3 class="box-title">Options</h3>
+    </div>
+    <div class="box-body table-responsive">
+        <table class="table table-striped">
+            <tr>
+                <th style="width: 50px">Option name</th>
+                <th style="width: 50px">Option value</th>
+                <th style="width: 50px">Description</th>
+            </tr>
+            <form method="post" enctype="multipart/form-data" action="">
+            {% for option in options %}
+                <tr>
+                    <td>{{ option.option_name }}</td>
+                    <td>
+                        {% if option.option_name in options_types %}
+                            {% if options_types[option.option_name] in ['INTEGER', 'FLOAT'] %}
+                                <input name="{{ option.option_name }}" type="number" value="{{ option.option_value }}">
+                            {% elif options_types[option.option_name] == 'BOOLEAN'%}
+                                <input name="{{ option.option_name }}" type="checkbox" {% if Option.get_option_value(option.option_name, 'BOOLEAN') %} checked {% endif %}>
+                            {% else %}
+                                <input name="{{ option.option_name }}" type="text" value="{{ option.option_value }}">
+                            {% endif %}
+                        {% else %}
+                            <input name="{{ option.option_name }}" type="text" value="{{ option.option_value }}">
+                        {% endif %}
+
+                    </td>
+                    <td>{{ option.option_desc }}</td>
+                </tr>
+            {% endfor %}
+            <div class="box-footer">
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+            </form>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -127,6 +127,24 @@ services:
     networks:
       - back
 
+  mysql:
+    image: mysql:5.7
+    volumes:
+     - mysql-data:/var/lib/mysql
+     - ./docker/mysql/dumps:/dumps
+     - ./docker/mysql/mysqld.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf:ro
+     - ./docker/mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    ports:
+    - "13306:3306"
+    environment:
+     MYSQL_ROOT_PASSWORD: rootp@ssw0rd
+     MYSQL_DATABASE: vitrina
+     MYSQL_USER: vitrina
+     MYSQL_PASSWORD: userp@ssw0rd
+    networks:
+      - back
+
 
 networks:
   back:
@@ -135,4 +153,6 @@ networks:
 volumes:
   logs: {}
   db-data: {}
+  mysql-data: {}
   nginx_log: {}
+

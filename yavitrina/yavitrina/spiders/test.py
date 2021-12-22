@@ -20,11 +20,14 @@ from yavitrina.items import TagItem
 from yavitrina.items import ProductCardItem
 from yavitrina.items import ProductItem
 from yavitrina.items import ImageItem
+from yavitrina.items import SettingItem
+from yavitrina.items import SettingValueItem
 from yavitrina.scrapestack import ScrapestackRequest
 from yavitrina.seleniumrequest import SelenuimRequest
 from scrapy_headless import HeadlessRequest
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from urllib import urlencode
+
 
 
 class TestSpider(scrapy.Spider):
@@ -43,8 +46,11 @@ class TestSpider(scrapy.Spider):
     base_url = 'https://yavitrina.ru'
     lua_src = pkgutil.get_data('yavitrina', 'lua/html-render.lua')
     scrapestack_access_key = ''
+    db = None
 
     custom_settings = {
+        #'LOG_LEVEL': 'DEBUG',
+        'LOG_LEVEL': 'INFO',
         'SELENIUM_GRID_URL': 'http://selenium-hub:4444/wd/hub',  # Example for local grid with docker-compose
         'SELENIUM_NODES': 1,  # Number of nodes(browsers) you are running on your grid
         'SELENIUM_CAPABILITIES': DesiredCapabilities.CHROME,
@@ -90,26 +96,52 @@ class TestSpider(scrapy.Spider):
         #print(driver.page_source)
 
     def start_requests(self):
-        url = 'https://yavitrina.ru/product/674779192'
+        #url = 'https://yavitrina.ru/product/674779192'
         url = 'https://yavitrina.ru/product/677731028'
-        url = 'https://yavitrina.ru/product/382715171'
+        #url = 'https://yavitrina.ru/product/382715171'
         #url = 'https://yavitrina.ru/product/822105004'
-        url = 'https://yavitrina.ru/product/14008662'
+        #url = 'https://yavitrina.ru/product/14008662'
+        #url = 'https://yavitrina.ru/zhenskaya-obuv'
         #url = 'https://hub.kuzovkov12.ru:8001/googleapi'
         #DOCKER_HOST_IP = os.popen("ip ro | grep default | cut -d' ' -f 3").read().strip()
         #url = 'http://{DOCKER_HOST_IP}:8002/googleapi'.format(DOCKER_HOST_IP=DOCKER_HOST_IP)
         #request = self.getRequest(url, self.parse_product_page, request_type='scrapestack')
         #request = self.getRequest(url, self.parse_product_page, request_type='selenium', use_scrapestack=True)
-        request = self.getRequest(url, self.parse_product_page, request_type='headless', use_scrapestack=False)
+        #request = self.getRequest(url, self.test_saving_filters, request_type='origin', use_scrapestack=False)
         #request = self.getRequest(url, self.parse_product_page, request_type='splash', use_scrapestack=True)
-        #request = self.getRequest(url, self.parse_product_page, request_type='origin', use_scrapestack=True)
+        #request = self.getRequest(url, self.parse_product_page, request_type='headless', use_scrapestack=True)
 
         #request = self.getRequest(url, self.parse_product_page)
         #url = 'https://yavitrina.ru/shampuni'
         #url = 'https://yavitrina.ru/verhnyaya-odezhda-dlya-malyshey'
         #request = self.getRequest(url, self.parse_sub_category3)
-        request.meta['parent'] = url
-        yield request
+        # request = self.getRequest(url, self.parse_product_page, request_type='headless', use_scrapestack=True)
+        # request.meta['parent'] = url
+        # yield request
+
+        #update feedbacks
+        #sql = "SELECT count(*) as total FROM product WHERE jsonb_array_length(feedbacks) > 0"
+        sql = '''select count(*)  as total from(
+                        select title, url, product_id, feedbacks::json#>'{0,image}' as image, feedbacks::json#>'{0,date}' as date, category  from (
+                        select title, url, product_id, feedbacks, category from product where  jsonb_array_length(feedbacks) > 0) t1) t2 where image isnull or date isnull'''
+        total = self.db._getone(sql)
+        pprint('total: {total}'.format(total=total))
+        LIMIT = 100
+        offsets = range(0, total, LIMIT)
+        for offset in offsets:
+            #sql = "SELECT title, url, product_id, feedbacks, category FROM product WHERE jsonb_array_length(feedbacks) > 0  ORDER BY id OFFSET {offset} LIMIT {limit}".format(offset=offset, limit=LIMIT)
+            sql = '''select * from(
+                            select title, url, product_id, feedbacks::json#>'{0,image}' as image, feedbacks::json#>'{0,date}' as date, category  from (
+                            select title, url, product_id, feedbacks, category from product where  jsonb_array_length(feedbacks) > 0) t1) t2 where image isnull or date isnull'''
+
+            products = self.db._getraw(sql, ['title', 'url', 'product_id', 'image', 'date', 'category'])
+            for product in products:
+                url = product['url']
+                request = self.getRequest(url, self.parse_product_page, request_type='headless', use_scrapestack=True)
+                request.meta['parent'] = url
+                request.meta['category'] = product['category']
+                yield request
+
 
     def parse_product_page(self, response):
         #pprint(response.text)
@@ -127,7 +159,6 @@ class TestSpider(scrapy.Spider):
         product_id = requested_url.split('/').pop()
         l.add_value('product_id', product_id)
         l.add_value('html', response.text)
-        #l.add_value('url', url)
         l.add_value('url', requested_url)
         l.add_value('title', title)
         l.add_value('description', description)
@@ -135,6 +166,10 @@ class TestSpider(scrapy.Spider):
         l.add_value('shop_link', shop_link)
         if 'ymarket_link' in response.meta and len(response.meta['ymarket_link']) > 0:
             l.add_value('shop_link2', response.meta['ymarket_link'])
+        if 'rate' in response.meta and len(response.meta['rate']) > 0:
+            l.add_value('rate', response.meta['rate'])
+        if 'colors' in response.meta and len(response.meta['colors']) > 0:
+            l.add_value('colors', response.meta['colors'])
         parameters = self.parse_parameters(response)
         l.add_value('parameters', parameters)
         feedbacks = self.parse_feedbacks(response)
@@ -145,17 +180,20 @@ class TestSpider(scrapy.Spider):
                 break
         elif 'category' in response.meta:
             l.add_value('category', response.meta['category'])
+        related_products = ','.join(map(lambda i: i.split('/').pop(), response.css('div[class="related-products"] div[class="b-info-wrap"] a').xpath('@href').extract()))
+        if len(related_products) > 0:
+            l.add_value('related_products', related_products)
         yield l.load_item()
         #save images
-        image_urls = response.css('div[class="photos"] img').xpath('@src').extract()
-        for link in image_urls:
-            if link.startswith('//') or (not link.startswith('https:')):
-                link = 'https:{img}'.format(img=link)
-            request = scrapy.Request(link, self.download_image)
-            request.meta['product_id'] = product_id
-            request.meta['filename'] = '-'.join(link.split('/')[-3:])
-            request.meta['autotype'] = True
-            yield request
+        # image_urls = response.css('div[class="photos"] img').xpath('@src').extract()
+        # for link in image_urls:
+        #     if link.startswith('//') or (not link.startswith('https:')):
+        #         link = 'https:{img}'.format(img=link)
+        #     request = scrapy.Request(link, self.download_image)
+        #     request.meta['product_id'] = product_id
+        #     request.meta['filename'] = '-'.join(link.split('/')[-3:])
+        #     request.meta['autotype'] = True
+        #     yield request
 
 
     def download_image(self, response):
@@ -329,8 +367,51 @@ class TestSpider(scrapy.Spider):
             item['plus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Достоинства']/following-sibling::p[1]").xpath('text()').extract())
             item['minus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Недостатки']/following-sibling::p[1]").xpath('text()').extract())
             item['comment'] = ' '.join(fb_response.xpath(u"//span[text() = 'Комментарий']/following-sibling::p[1]").xpath('text()').extract())
+            item['date'] = ' '.join(fb_response.xpath('//div[3]').xpath('text()').extract())
+            item['image'] = ' '.join(fb_response.xpath('//img').xpath('@src').extract())
             data.append(item)
+        pprint(data)
         return json.dumps(data)
+
+    def parse_filters(self, response):
+        self.logger.info('!!!PARSE FILTERS')
+        filters = {'url': None, 'settings': []}
+        url = ' '.join(response.css('form[id="filter-form"]').xpath('@action').extract())
+        filters['url'] = url
+        self.logger.debug('url={url}'.format(url=url))
+        filter_blocks = response.css('form[id="filter-form"] div[class="box active"]').extract()
+        for body in filter_blocks:
+            block = response.replace(body=body.encode('utf-8'))
+            setting = u' '.join(filter(lambda i: len(i) > 0, map(lambda i: i.strip(), block.css('div[class="heading"]').xpath('text()').extract())))
+            if len(setting) == 0:
+                continue
+            self.logger.debug(u'setting={setting}'.format(setting=setting))
+            setting_values = filter(lambda i: len(i)>0, map(lambda i: i.strip(), block.css('div[class="box-inner"] div[class="ya-checkbox"] label[class="ya-check-label"]').xpath('text()').extract()))
+            self.logger.debug('setting_values={setting_values}'.format(setting_values=setting_values))
+            filters['settings'].append({setting: setting_values})
+        self.logger.debug(u'filters={filters}'.format(filters=filters))
+        return filters
+
+    def test_saving_filters(self, response):
+        # save filters
+        filters = self.parse_filters(response)
+        if filters['url'] is not None and len(filters['settings']) > 0:
+            for setting in filters['settings']:
+                if type(setting) is dict:
+                    for setting_name, setting_values in setting.items():
+                        l = ItemLoader(item=SettingItem(), response=response)
+                        l.add_value('url', filters['url'])
+                        l.add_value('name', setting_name)
+                        yield l.load_item()
+                        for setting_value in setting_values:
+                            l = ItemLoader(item=SettingValueItem(), response=response)
+                            l.add_value('settings_name', setting_name)
+                            l.add_value('value', setting_value)
+                            l.add_value('url', filters['url'])
+                            yield l.load_item()
+
+
+
 
 
 
