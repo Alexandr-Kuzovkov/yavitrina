@@ -99,6 +99,11 @@ You can see logs of spider in dashboard.
 Press red button `stop` on right side in `Running Jobs` table
 ![run spider](screen3.png?raw=true)
 
+##### view scraping statistic:
+![run spider](screen4.png?raw=true)
+
+##### view database export statistic:
+![run spider](screen5.png?raw=true)
 
 #### VII. Develop and debug
 ```bash
