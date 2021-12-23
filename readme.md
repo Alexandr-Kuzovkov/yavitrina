@@ -47,6 +47,21 @@ DB_HOST=db
 DB_PORT=5432
 DB_NAME=vitrina
 DB_PASS=P@ssw0rd
+
+[SCRAPESTACK]
+ACCESS_KEY=fbb9dd0686xxxxxxxxxxxxxxxxxxxxxx
+
+[MYSQL]
+DB_USER=vitrina
+DB_HOST=mysql
+DB_PORT=3306
+DB_NAME=vitrina
+DB_PASS=xxxxxxxxx
+
+[SETTINGS]
+SPLASH_URL=http://example.com:8050
+LOG_LEVEL=INFO
+
 ```
  
 #### IV. Run project:
