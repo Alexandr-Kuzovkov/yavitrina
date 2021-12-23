@@ -88,13 +88,16 @@ File `output.egg` you should use in Deploy form in dashboard.
 ##### vitrina scraper:
 In dashboard press button `Run`, choose spider `vitrina` and press button `Create`
 You can see logs of spider in dashboard.
+![run spider](screen1.png?raw=true)
 
 ##### database exporter:
 In dashboard press button `Run`, choose spider `exporter` and press button `Create`
 You can see logs of spider in dashboard.
+![run spider](screen2.png?raw=true)
 
-![run spider](screen1.png?raw=true)
-
+##### stop spider:
+Press red button `stop` on right side in `Running Jobs` table
+![run spider](screen3.png?raw=true)
 
 
 #### VII. Develop and debug
