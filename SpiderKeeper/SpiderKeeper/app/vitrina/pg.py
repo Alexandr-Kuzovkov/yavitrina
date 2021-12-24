@@ -170,9 +170,9 @@ class PgSQLStore(PgSQLStoreBase):
         if entity == 'brocken_product':
             res = self._getone("SELECT count(*) AS count FROM product WHERE (description ISNULL OR description='') AND (title ISNULL OR title='')")
         elif entity == 'product_with_params':
-            res = self._getone("SELECT count(* ) AS count FROM product WHERE parameters NOTNULL")
+            res = self._getone("select count(*) AS total from (select title, url, product_id, parameters, (select count(*) from jsonb_object_keys(parameters)) as params_count from product)t1 where params_count > 0")
         elif entity == 'product_with_feedback':
-            res = self._getone("SELECT count(*) AS count FROM product WHERE feedbacks NOTNULL")
+            res = self._getone("select count(*) AS total from (select title, url, product_id, feedbacks::json#>'{0,date}' as date from (select title, url, product_id, feedbacks from product where  jsonb_array_length(feedbacks) > 0) t1) t2 where date notnull")
         else:
             res = self._getone("SELECT count(*) AS count FROM " + entity)
         if res and len(res):
@@ -184,9 +184,9 @@ class PgSQLStore(PgSQLStoreBase):
         if entity == 'brocken_product':
             query = "SELECT count(*) AS count FROM product WHERE (description ISNULL OR description='') AND (title ISNULL OR title='') AND date(created_at)='{date}'".format(date=datestr)
         elif entity == 'product_with_params':
-            query = "SELECT count(* ) AS count FROM product WHERE parameters NOTNULL AND date(created_at)='{date}'".format(date=datestr)
+            query = "select count(*) AS total from (select title, url, product_id, parameters, (select count(*) from jsonb_object_keys(parameters)) as params_count from product WHERE date(created_at)='{date}')t1 where params_count > 0 ".format(date=datestr)
         elif entity == 'product_with_feedback':
-            query = "SELECT count(*) AS count FROM product WHERE feedbacks NOTNULL AND date(created_at)='{date}'".format(date=datestr)
+            query = "select count(*) AS total from (select title, url, product_id, feedbacks::json#>'{0,date}' as date from (select title, url, product_id, feedbacks from product where  jsonb_array_length(feedbacks) > 0 AND date(created_at)='%s') t1) t2 where date notnull" % datestr
         else:
             query = "SELECT count(*) AS count FROM {entity} WHERE date(created_at)='{date}'".format(entity=entity, date=datestr)
         try:

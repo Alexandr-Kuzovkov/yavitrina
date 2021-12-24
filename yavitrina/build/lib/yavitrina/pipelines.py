@@ -29,12 +29,12 @@ from yavitrina.items import ProductItem
 from yavitrina.items import ImageItem
 from yavitrina.items import SearchTagItem
 from yavitrina.items import CategoryTagItem
-from yavitrina.items import SettingItem
-from yavitrina.items import SettingValueItem
 from scrapy.exceptions import CloseSpider
 from yavitrina.config import load_config
 from yavitrina.extensions import PgSQLStore
 from yavitrina.extensions import MySQLStore
+from yavitrina.items import SettingItem
+from yavitrina.items import SettingValueItem
 
 def create_folder(directory):
     logger.debug('Create directory. "%s"' % directory)
@@ -131,7 +131,7 @@ class DatabaseExporterPipeline(object):
         crawler.signals.connect(pipeline.spider_opened, signals.spider_opened)
         crawler.signals.connect(pipeline.spider_closed, signals.spider_closed)
         self.stats = crawler.stats
-        if crawler.spider is not None and crawler.spider.name in ['test2']:
+        if crawler.spider is not None and crawler.spider.name in ['test2', 'exporter']:
             return pipeline
 
     def spider_opened(self, spider):
@@ -312,6 +312,8 @@ class YavitrinaPgSqlExporter(object):
         self.db = PgSQLStore(db_conf)
         if hasattr(self.spider, 'clear_db') and self.spider.clear_db:
             self.db.clear_db()
+        if self.spider.name in ['test']:
+            self.spider.db = self.db
 
     def finish_exporting(self):
         logging.info('Exporting done: stat: {stat}'.format(stat=str(self.stat)))
@@ -553,28 +555,13 @@ class YavitrinaDatabaseExporter(object):
             self.db_export.clear_db()
 
     def finish_exporting(self):
+        self.db_export.flush()
         logging.info('Exporting done: stat: {stat}'.format(stat=str(self.stat)))
 
     def export_item(self, item):
         entity = None
         res = None
-        if isinstance(item, SettingItem):
-            logging.debug('saving setting item')
-            entity = 'setting'
-            res = self.save_setting(item)
-
-
-    def save_setting(self, item):
-        data = {}
-        mapping = {}
-        for key, val in item.items():
-            if key in mapping:
-                key = mapping[key]
-            if type(val) is list:
-                data[key] = u','.join(map(lambda i: unicode(i), val))
-            else:
-                data[key] = val
-        self.db_export.save_setting(data)
+        return item
 
 
 

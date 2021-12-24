@@ -47,6 +47,21 @@ DB_HOST=db
 DB_PORT=5432
 DB_NAME=vitrina
 DB_PASS=P@ssw0rd
+
+[SCRAPESTACK]
+ACCESS_KEY=fbb9dd0686xxxxxxxxxxxxxxxxxxxxxx
+
+[MYSQL]
+DB_USER=vitrina
+DB_HOST=mysql
+DB_PORT=3306
+DB_NAME=vitrina
+DB_PASS=xxxxxxxxx
+
+[SETTINGS]
+SPLASH_URL=http://example.com:8050
+LOG_LEVEL=INFO
+
 ```
  
 #### IV. Run project:
@@ -70,8 +85,25 @@ File `output.egg` you should use in Deploy form in dashboard.
 
 #### VI. Run spider
 
+##### vitrina scraper:
 In dashboard press button `Run`, choose spider `vitrina` and press button `Create`
 You can see logs of spider in dashboard.
+![run spider](screen1.png?raw=true)
+
+##### database exporter:
+In dashboard press button `Run`, choose spider `exporter` and press button `Create`
+You can see logs of spider in dashboard.
+![run spider](screen2.png?raw=true)
+
+##### stop spider:
+Press red button `stop` on right side in `Running Jobs` table
+![run spider](screen3.png?raw=true)
+
+##### view scraping statistic:
+![run spider](screen4.png?raw=true)
+
+##### view database export statistic:
+![run spider](screen5.png?raw=true)
 
 #### VII. Develop and debug
 ```bash

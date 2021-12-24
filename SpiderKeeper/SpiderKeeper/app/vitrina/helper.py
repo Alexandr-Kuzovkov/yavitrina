@@ -31,7 +31,7 @@ mysql_db = MySQLStore(mysql_db_conf)
 def get_dates():
     dates = []
     now = int(time.time())
-    for i in range(0, 10):
+    for i in range(0, 20):
         datestr = time.strftime('%Y-%m-%d', time.gmtime(now - i * 86400))
         dates.append(datestr)
     return dates

@@ -172,6 +172,17 @@ class PgSQLBase(object):
         else:
             return val
 
+    def _getone(self, sql, data=None):
+        self.dbopen()
+        if data is None:
+            self.cur.execute(sql)
+        else:
+            self.cur.execute(sql, data)
+        data = self.cur.fetchone()
+        if len(data) > 0:
+            return data[0]
+        return None
+
 
 class PgSQLStore(PgSQLBase):
 
@@ -322,6 +333,34 @@ class PgSQLStore(PgSQLBase):
             self._insert('settings_value', [data])
             return None
 
+    def get_items_total(self, table, condition=None):
+        if condition is not None and type(condition) is not dict:
+            raise Exception('Type of the condition must be dict!')
+        if condition is not None:
+            cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
+            data = condition.values()
+            sql = "SELECT count(*) AS total FROM {table} WHERE {cond}".format(table=table, cond=cond)
+        else:
+            data = None
+            sql = "SELECT count(*) AS total FROM {table}".format(table=table)
+        self.dbopen()
+        res = self._getone(sql, data)
+        return res
+
+    def get_items_chunk(self, table, condition=None, offset=0, limit=100, order='id'):
+        if condition is not None and type(condition) is not dict:
+            raise Exception('Type of the condition must be dict!')
+        fld_lst = self._get_fld_list(table)
+        if condition is not None:
+            cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
+            data = condition.values()
+            sql = "SELECT * FROM {table} WHERE {cond} ORDER BY {order} OFFSET {offset} LIMIT {limit} ".format(table=table, cond=cond, order=order, limit=limit, offset=offset)
+            res = self._getraw(sql, fld_lst, data)
+        else:
+            sql = "SELECT * FROM {table} ORDER BY {order} OFFSET {offset} LIMIT {limit} ".format(table=table, order=order, limit=limit, offset=offset)
+            res = self._getraw(sql, fld_lst)
+        return res
+
 
 
 class MySQLBase(object):
@@ -340,6 +379,7 @@ class MySQLBase(object):
         if self.conn is None:
             self.conn = connector.MySQLConnection(host=self.dbhost, user=self.dbuser, password=self.dbpass, port=self.dbport, database=self.dbname)
             self.cur = self.conn.cursor()
+            self.cur.execute('SET NAMES utf8mb4')
 
     def dbclose(self):
         if self.conn is not None:
@@ -393,6 +433,11 @@ class MySQLBase(object):
             self.dbclose()
         return res
 
+    def _get_tables_list(self):
+        sql = "SHOW TABLES"
+        res = self._getraw(sql, ['Tables_in_{database}'.format(database=self.dbname)])
+        return map(lambda i: i['Tables_in_{database}'.format(database=self.dbname)], res)
+
     def _get(self, table, field_list=None, where='', data=None):
         self.dbopen()
         if field_list is None:
@@ -414,7 +459,18 @@ class MySQLBase(object):
         self.dbclose()
         return res
 
-    def _insert(self, table, data):
+    def _getone(self, sql, data=None):
+        self.dbopen()
+        if data is None:
+            self.cur.execute(sql)
+        else:
+            self.cur.execute(sql, data)
+        data = self.cur.fetchone()
+        if data is not None and len(data) > 0:
+            return data[0]
+        return None
+
+    def _insert(self, table, data, ignore=False):
         if type(data) is not list:
             raise Exception('Type of data must be list!')
         self.dbopen()
@@ -422,11 +478,14 @@ class MySQLBase(object):
         for row in data:
             if type(row) is not dict:
                 raise Exception('Type of row must be dict!')
-            sql = ' '.join(['INSERT INTO', table, '(', ','.join(row.keys()), ') VALUES (', ','.join(['%s' for i in row.keys()]), ');'])
+            if ignore:
+                sql = ' '.join(['INSERT IGNORE INTO', table, '(', ','.join(row.keys()), ') VALUES (', ','.join(['%s' for i in row.keys()]), ');'])
+            else:
+                sql = ' '.join(['INSERT INTO', table, '(', ','.join(row.keys()), ') VALUES (', ','.join(['%s' for i in row.keys()]), ');'])
             try:
                 values = map(lambda val: self._serialise_dict(val), row.values())
                 self.cur.execute(sql, values)
-            except psycopg2.Error, ex:
+            except Exception as ex:
                 self.conn.rollback()
                 self.dbclose()
                 print ex
@@ -455,7 +514,7 @@ class MySQLBase(object):
         values = map(lambda val: self._serialise_dict(val), data.values()) + map(lambda val: self._serialise_dict(val), cond.values())
         try:
             self.cur.execute(sql, values)
-        except psycopg2.Error, ex:
+        except Exception as ex:
             self.conn.rollback()
             self.dbclose()
             print ex
@@ -469,21 +528,96 @@ class MySQLBase(object):
         else:
             return val
 
-
-
-
+    def _clear_table(self, table):
+        sql = ' '.join(['DELETE FROM', table])
+        self.dbopen()
+        try:
+            self.cur.execute(sql)
+        except Exception as ex:
+            self.conn.rollback()
+            self.dbclose()
+            raise ex
+        else:
+            self.conn.commit()
+            self.dbclose()
 
 
 class MySQLStore(MySQLBase):
 
-    def save_setting(self, data):
-        res = self._get('settings', field_list=None, where='name=%s', data=[data['name']])
-        if len(res) > 0:
-            setting = res[0]
-            return None
-        else:
-            res = self._insert('settings', [data])
-            return res
+    exclude_tables = []
+    buffer_size = 200
+    buffer = {}
 
+    def clear_db(self):
+        tables = self._get_tables_list()
+        while len(tables) > 0:
+            table = tables[0]
+            if table in self.exclude_tables:
+                tables.pop(0)
+                continue
+            try:
+                self._clear_table(table)
+            except Exception as ex:
+                tables.append(tables.pop(0))
+            else:
+                tables.pop(0)
+
+    def get_latest_time(self, table):
+        sql = "SELECT max(created_at) AS last_time FROM {table}".format(table=table)
+        res = self._getone(sql)
+        return res
+
+    def flush(self):
+        for table in self.buffer.keys():
+            if len(self.buffer[table]) > 0:
+                self._insert(table, self.buffer[table])
+
+
+    def save_product(self, data):
+        table = 'product'
+        if table not in self.buffer:
+            self.buffer[table] = []
+        if len(self.buffer[table]) < self.buffer_size:
+            self.buffer[table].append(data)
+        else:
+            try:
+                product_ids = map(lambda i: i['product_id'], self.buffer[table])
+                exist_items = self._getraw("SELECT product_id FROM product WHERE product_id IN (%s)" % ','.join(product_ids), ['product_id'], None)
+                exist_product_ids = map(lambda i: i['product_id'], exist_items)
+                filtered_buffer = filter(lambda i: i['product_id'] not in exist_product_ids, self.buffer[table])
+                self._insert(table, filtered_buffer)
+                self.buffer[table] = []
+            except Exception as ex:
+                print(ex)
+            finally:
+                self.buffer[table].append(data)
+
+    def get_items_chunk(self, table, condition=None, offset=0, limit=100, order='id'):
+        if condition is not None and type(condition) is not dict:
+            raise Exception('Type of the condition must be dict!')
+        fld_lst = self._get_fld_list(table)
+        if condition is not None:
+            cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
+            data = condition.values()
+            sql = "SELECT * FROM {table} WHERE {cond} ORDER BY {order}  LIMIT {limit} OFFSET {offset}".format(table=table, cond=cond, order=order, limit=limit, offset=offset)
+            res = self._getraw(sql, fld_lst, data)
+        else:
+            sql = "SELECT * FROM {table} ORDER BY {order} LIMIT {limit} OFFSET {offset} ".format(table=table, order=order, limit=limit, offset=offset)
+            res = self._getraw(sql, fld_lst)
+        return res
+
+    def get_items_total(self, table, condition=None):
+        if condition is not None and type(condition) is not dict:
+            raise Exception('Type of the condition must be dict!')
+        if condition is not None:
+            cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
+            data = condition.values()
+            sql = "SELECT count(*) AS total FROM {table} WHERE {cond}".format(table=table, cond=cond)
+        else:
+            data = None
+            sql = "SELECT count(*) AS total FROM {table}".format(table=table)
+        self.dbopen()
+        res = self._getone(sql, data)
+        return res
 
 
