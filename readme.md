@@ -89,6 +89,22 @@ File `output.egg` you should use in Deploy form in dashboard.
 In dashboard press button `Run`, choose spider `vitrina` and press button `Create`
 You can see logs of spider in dashboard.
 ![run spider](screen1.png?raw=true)
+Парсер может принимать 2 аргумента: `request_type`,  `product_request_type`, 
+
+параметры записываются в поле “Args” в формате name=value. 
+
+Параметры разделяются запятой.
+
+Возможные значения: 
+    
+    `headless` - рендеринг страницы через плагин `scrapy-headless` (default для product_request_type),
+    
+    `selenium` - рендеринг страницы через `selenium` ,
+    
+    `splash` - рендеринг страницы через плагин `scrapy-splash` (default для request_type),
+    
+    `origin` - используется стандартный `scrapy.Request` объект
+
 
 ##### database exporter:
 In dashboard press button `Run`, choose spider `exporter` and press button `Create`
