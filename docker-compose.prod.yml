@@ -1,0 +1,168 @@
+version: '3.0'
+services:
+  proxy:
+    image: nginx:1.15-alpine
+    depends_on:
+     - scrapy
+    ports:
+     - "9000:80"
+    volumes:
+     - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+     - ./home/logs/boardfeeds:/home/root/logs/boardfeeds
+     - /mnt/boardfeeds:/mnt/boardfeeds
+    networks:
+      - back
+
+  scrapy:
+    build: .
+    tty: true
+    depends_on:
+      - splash
+    volumes:
+      - ./yavitrina:/scrapy/yavitrina
+      - ./home/scrapyd.conf:/etc/scrapyd/scrapyd.conf
+      - ./home/scrapyd.conf:/home/root/.scrapyd.conf
+      - /home/ubuntu:/home/root
+      #- /home/user1:/home/root
+      #- /mnt/boardfeeds:/mnt/boardfeeds
+    dns: 8.8.8.8
+    #restart: always
+    networks:
+      - back
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
+
+  spiderkeeper:
+    build:
+      context: ./SpiderKeeper
+      dockerfile: Dockerfile
+    depends_on:
+      - scrapy
+      - db
+    tty: true
+    networks:
+      - back
+    volumes:
+      - ./home:/home/root
+      - /home/ubuntu/vitrina.config.ini:/home/root/config.ini
+      - /home/ubuntu/logs:/home/root/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
+
+  splash:
+    image: scrapinghub/splash
+    command: ["splash", "--max-timeout=3600",  "--disable-lua-sandbox"]
+    networks:
+      - back
+    ports:
+      - "5023:5023"
+      - "8050:8050"
+      - "8051:8051"
+    dns: 8.8.8.8
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
+    mem_limit: 1200m
+    memswap_limit: 1400m
+    restart: always
+
+  db:
+    image: postgres:12.1
+    environment:
+      POSTGRES_PASSWORD: P@ssw0rd
+      POSTGRES_USER: vitrina
+      POSTGRES_DB: vitrina
+    volumes:
+      - ./docker/db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./docker/db/dumps:/dumps
+      - ./docker/db/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./docker/db/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./docker/db/pg_ident.conf:/etc/postgresql/pg_ident.conf
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "65432:5432"
+    networks:
+      - back
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+
+  selenium:
+    privileged: true
+    build:
+      context: ./selenium
+      dockerfile: Dockerfile
+    volumes:
+      - ./selenium/app:/usr/src/app
+      - ./selenium/data:/data
+      - /dev/shm:/dev/shm
+      - nginx_log:/nginx_log
+    dns: 8.8.8.8
+    ports:
+      - "8257:8000"
+    networks:
+      - back
+    user: apps
+    mem_limit: 1500m
+    memswap_limit: 3000m
+    restart: always
+
+  selenium-hub:
+    image: selenium/hub
+    networks:
+      - back
+    ports:
+      - 4444:4444
+    mem_limit: 1500m
+    memswap_limit: 2000m
+    restart: always
+
+  chrome:
+    image: selenium/node-chrome
+    links:
+      - selenium-hub:hub
+    environment:
+      - HUB_PORT_4444_TCP_ADDR=selenium-hub:4444/grid/register/
+      - GRID_TIMEOUT=180 # Default timeout is 30s might be low for Selenium
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - back
+    mem_limit: 1500m
+    memswap_limit: 3000m
+    restart: always
+
+  mysql:
+    image: mysql:5.7
+    volumes:
+     - mysql-data:/var/lib/mysql
+     - ./docker/mysql/dumps:/dumps
+     - ./docker/mysql/mysqld.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf:ro
+     - ./docker/mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    ports:
+    - "13306:3306"
+    environment:
+     MYSQL_ROOT_PASSWORD: rootp@ssw0rd
+     MYSQL_DATABASE: vitrina
+     MYSQL_USER: vitrina
+     MYSQL_PASSWORD: userp@ssw0rd
+    networks:
+      - back
+
+
+networks:
+  back:
+    driver: bridge
+
+volumes:
+  logs: {}
+  db-data: {}
+  mysql-data: {}
+  nginx_log: {}
