@@ -125,7 +125,7 @@ Press red button `stop` on right side in `Running Jobs` table
 password can be set in file `~/yavitrina/SpiderKeeper/start.sh`:
 ![set password](screen6.png?raw=true)
 
-After password will change, container must bi rebuild:
+After changing the password, the container must be rebuilt:
 
 ```bash
 sudo docker-compose -f docker-compose.prod.yml stop spiderkeeper
