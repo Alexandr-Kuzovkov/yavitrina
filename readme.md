@@ -113,13 +113,25 @@ You can see logs of spider in dashboard.
 
 ##### stop spider:
 Press red button `stop` on right side in `Running Jobs` table
-![run spider](screen3.png?raw=true)
+![stop spider](screen3.png?raw=true)
 
 ##### view scraping statistic:
-![run spider](screen4.png?raw=true)
+![view stat](screen4.png?raw=true)
 
 ##### view database export statistic:
 ![run spider](screen5.png?raw=true)
+
+##### set dashboard password:
+password can be set in file:
+![set password](screen6.png?raw=true)
+
+After password will change, container must bi rebuild:
+
+```bash
+sudo docker-compose -f docker-compose.prod.yml stop spiderkeeper
+sudo docker-compose -f docker-compose.prod.yml build spiderkeeper
+sudo docker-compose -f docker-compose.prod.yml up -d spiderkeeper
+```
 
 #### VII. Develop and debug
 ```bash
