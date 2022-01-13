@@ -122,7 +122,7 @@ Press red button `stop` on right side in `Running Jobs` table
 ![run spider](screen5.png?raw=true)
 
 ##### set dashboard password:
-password can be set in file:
+password can be set in file `~/yavitrina/SpiderKeeper/start.sh`:
 ![set password](screen6.png?raw=true)
 
 After password will change, container must bi rebuild:
