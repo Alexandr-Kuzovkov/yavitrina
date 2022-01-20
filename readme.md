@@ -70,6 +70,13 @@ LOG_LEVEL=INFO
 sudo docker-compose up -d
 sudo docker-compose ps # check that all services are running
 ```
+
+#####Note!!!
+For production server you have to use file  `docker-compose.prod.yml` :
+```bash
+sudo docker-compose -f docker-compose.prod.yml up -d
+sudo docker-compose -f docker-compose.prod.yml  ps # check that all services are running
+```
 Go to dashboard, [http://localhost:9000](http://localhost:9000)
 Create project with name, example `yavitrina`
 
