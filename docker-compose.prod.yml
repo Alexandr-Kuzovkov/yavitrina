@@ -1,11 +1,11 @@
-version: '3.0'
+version: '2'
 services:
   proxy:
     image: nginx:1.15-alpine
     depends_on:
      - scrapy
     ports:
-     - "9000:80"
+     - "80:80"
     volumes:
      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
      - ./home/logs/boardfeeds:/home/root/logs/boardfeeds
