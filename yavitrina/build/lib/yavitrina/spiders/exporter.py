@@ -94,6 +94,8 @@ class ExporterSpider(scrapy.Spider):
                 row['product_id'] = product['product_id']
                 row['rate'] = product['rate']
                 row['created_at'] = self.datetime2str(product['created_at'])
+                if row['title'] is None or len(row['title']) == 0:
+                    continue
                 buffer.append(row)
                 if product['colors'] is not None:
                     product_colors[product['product_id']] = product['colors']

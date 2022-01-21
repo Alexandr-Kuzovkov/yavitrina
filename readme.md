@@ -70,6 +70,13 @@ LOG_LEVEL=INFO
 sudo docker-compose up -d
 sudo docker-compose ps # check that all services are running
 ```
+
+#####Note!!!
+For production server you have to use file  `docker-compose.prod.yml` :
+```bash
+sudo docker-compose -f docker-compose.prod.yml up -d
+sudo docker-compose -f docker-compose.prod.yml  ps # check that all services are running
+```
 Go to dashboard, [http://localhost:9000](http://localhost:9000)
 Create project with name, example `yavitrina`
 
@@ -113,13 +120,25 @@ You can see logs of spider in dashboard.
 
 ##### stop spider:
 Press red button `stop` on right side in `Running Jobs` table
-![run spider](screen3.png?raw=true)
+![stop spider](screen3.png?raw=true)
 
 ##### view scraping statistic:
-![run spider](screen4.png?raw=true)
+![view stat](screen4.png?raw=true)
 
 ##### view database export statistic:
 ![run spider](screen5.png?raw=true)
+
+##### set dashboard password:
+password can be set in file `~/yavitrina/SpiderKeeper/start.sh`:
+![set password](screen6.png?raw=true)
+
+After changing the password, the container must be rebuilt:
+
+```bash
+sudo docker-compose -f docker-compose.prod.yml stop spiderkeeper
+sudo docker-compose -f docker-compose.prod.yml build spiderkeeper
+sudo docker-compose -f docker-compose.prod.yml up -d spiderkeeper
+```
 
 #### VII. Develop and debug
 ```bash
