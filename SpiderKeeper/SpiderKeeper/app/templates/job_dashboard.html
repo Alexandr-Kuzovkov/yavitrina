@@ -88,6 +88,8 @@
                 <th style="width: 40px">Runtime</th>
                 <th style="width: 120px">Started</th>
                 <th style="width: 40px">Log</th>
+                <th style="width: 10px">Tail of Log</th>
+                <th style="width: 10px">Errors</th>
                 <th style="width: 40px">Running On</th>
                 <th style="width: 40px">Action</th>
             </tr>
@@ -122,6 +124,8 @@
                 <td><a href="/project/{{ project.id }}/jobexecs/{{ job.job_execution_id }}/log" target="_blank"
                        data-toggle="tooltip" data-placement="top" title="{{ job.service_job_execution_id }}">Log</a>
                 </td>
+                <td><a class="tail-log" href="#" id="{{ project.id }}-{{ job.job_execution_id }}">Tail</a></td>
+                <td><a class="errors-log" href="#" id="errors-{{ project.id }}-{{ job.job_execution_id }}">Errors</a></td>
                 <td style="font-size: 10px;">{{ job.running_on }}</td>
                 <td>
                     <a href="/project/{{ project.id }}/jobexecs/{{ job.job_execution_id }}/stop"><span

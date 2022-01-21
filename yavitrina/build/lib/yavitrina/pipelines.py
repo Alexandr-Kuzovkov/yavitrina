@@ -343,19 +343,19 @@ class YavitrinaPgSqlExporter(object):
             entity = 'image'
             res = self.save_image_item(item)
         elif isinstance(item, SearchTagItem):
-            logging.info('saving search tag item')
+            logging.debug('saving search tag item')
             self.save_search_tag_item(item)
         elif isinstance(item, CategoryTagItem):
-            logging.info('saving category tag item')
+            logging.debug('saving category tag item')
             self.save_category_tag_item(item)
         elif isinstance(item, CategoryDescriptionItem):
-            logging.info('saving category description')
+            logging.debug('saving category description')
             self.save_category_description(item)
         elif isinstance(item, SettingItem):
-            logging.info('saving setting item')
+            logging.debug('saving setting item')
             self.save_settings_item(item)
         elif isinstance(item, SettingValueItem):
-            logging.info('saving setting_value item')
+            logging.debug('saving setting_value item')
             self.save_settings_value_item(item)
         if entity is not None:
             self.stat[entity]['parsed'] += 1
