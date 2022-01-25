@@ -42,23 +42,24 @@ class ExporterSpider(scrapy.Spider):
 
     def starting_export(self, response):
         self.helper()
-        data = self.export_product()
-        self.export_product_colors(data['product_colors'])
-        self.export_search_product(data['related_products'])
-        self.export_product_image(data['product_colors'].keys())
-        self.export_product_price(data['product_prices'])
-        self.export_review(data['feedbacks'])
-        category_urls = self.export_category()
-        self.link_categories(category_urls)
-        self.link_categories(category_urls)
-        self.export_settings()
-        self.export_settings_value()
-        self.export_category_search()
-        self.export_category_has_settings()
-        self.export_product_category()
-        self.export_tag()
-        self.export_new_category()
-        self.export_product_settings()
+        # data = self.export_product()
+        # self.export_product_colors(data['product_colors'])
+        # self.export_search_product(data['related_products'])
+        # self.export_product_image(data['product_colors'].keys())
+        # self.export_product_price(data['product_prices'])
+        # self.export_review(data['feedbacks'])
+        # category_urls = self.export_category()
+        # self.link_categories(category_urls)
+        # self.link_categories(category_urls)
+        # self.export_settings()
+        # self.export_settings_value()
+        # self.export_category_search()
+        # self.export_category_has_settings()
+        # self.export_product_category()
+        # self.export_tag()
+        self.export_product_tag()
+        # self.export_new_category()
+        # self.export_product_settings()
 
     def export_product(self):
         self.logger.info('export product...')
@@ -84,7 +85,8 @@ class ExporterSpider(scrapy.Spider):
                 row = {}
                 rating = None
                 if product['rate'] is not None:
-                    rating = float(product['rate'].strip().replace('(', '').replace(')', '').replace('/', '.'))
+                    # rating = float(product['rate'].strip().replace('(', '').replace(')', '').replace('/', '.'))
+                    rating = float(product['rate'].strip().replace('(', '').replace(')', '').split('/').pop())
                 row['title'] = product['title']
                 row['description'] = product['description']
                 row['price'] = product['price']
@@ -506,10 +508,41 @@ class ExporterSpider(scrapy.Spider):
                     category_id = category_map[tag['page']]
                 else:
                     category_id = None
-                sql = "INSERT INTO tag (name, category_id) VALUES (%s,%s) ON DUPLICATE KEY UPDATE category_id=%s"
-                self.db_export.cur.execute(sql, [tag['title'], category_id, category_id])
+                sql = "INSERT INTO tag (name, category_id, url, title) VALUES (%s,%s,%s,%s) ON DUPLICATE KEY UPDATE category_id=%s"
+                self.db_export.cur.execute(sql, [tag['title'], category_id, tag['url'], tag['target_title'], category_id])
             self.db_export.conn.commit()
         self.logger.info('done')
+
+    def export_product_tag(self):
+        self.logger.info('export product_tag...')
+        LIMIT = 100
+        sql = "SELECT count(*) as total FROM product_card INNER JOIN tag ON string_to_array(product_card.page, ',') && string_to_array(tag.page, ',')"
+        total_items = self.db_import._getone(sql)
+        pprint(total_items)
+        offsets = range(0, total_items, LIMIT)
+        for offset in offsets:
+            buffer = []
+            sql = "SELECT product_id, tag.url FROM product_card INNER JOIN tag ON string_to_array(product_card.page, ',') && string_to_array(tag.page, ',') ORDER BY product_card.id OFFSET {offset} LIMIT {limit}".format(offset=offset, limit=LIMIT)
+            items = self.db_import._getraw(sql, ['product_id', 'url'])
+            part_ids = map(lambda i: i['product_id'], items)
+            products = self.db_export._getraw("SELECT id, product_id FROM product WHERE product_id IN (%s)" % ','.join(map(lambda i: "'%s'" % i, part_ids)), ['id', 'product_id'])
+            product_map = {}
+            for product in products:
+                product_map[product['product_id']] = product['id']
+            part_urls = map(lambda i: i['url'], items)
+            tags = self.db_export._getraw("SELECT id, url FROM tag WHERE url IN (%s)" % ','.join(map(lambda i: "'%s'" % i, part_urls)), ['id', 'url'])
+            tag_map = {}
+            for tag in tags:
+                tag_map[tag['url']] = tag['id']
+            for item in items:
+                row = {}
+                if item['product_id'] in product_map and item['url'] in tag_map:
+                    row['product_id'] = product_map[item['product_id']]
+                    row['tag_id'] = tag_map[item['url']]
+                    buffer.append(row)
+            self.db_export._insert('product_tag', buffer, ignore=True)
+        self.logger.info('done')
+
 
     def export_new_category(self):
         self.logger.info('export new category...')

@@ -117,12 +117,26 @@ class ProductParserSpider(scrapy.Spider):
         offsets = range(0, total_cards, LIMIT)
         for offset in offsets:
             self.logger.debug('handle tags %s-%s' % (offset, min(offset+LIMIT, total_cards)))
-            cards = self.db._getraw("SELECT pc.url, pc.product_id, pc.html AS total FROM product_card pc LEFT JOIN  product p ON pc.product_id = p.product_id WHERE p.title ISNULL ORDER BY pc.id OFFSET {offset} LIMIT {limit} ".format(offset=offset, limit=LIMIT), ['url', 'product_id', 'html'])
+            cards = self.db._getraw("SELECT pc.url, pc.product_id, pc.html, pc.page AS total FROM product_card pc LEFT JOIN  product p ON pc.product_id = p.product_id WHERE p.title ISNULL ORDER BY pc.id OFFSET {offset} LIMIT {limit} ".format(offset=offset, limit=LIMIT), ['url', 'product_id', 'html', 'page'])
             for card in cards:
-                pprint(card['url'])
-                # url = ''.join([self.base_url, card['url']])
-                # request = self.getRequest(url, callback=self.handle_target_page, request_type='origin')
-                # yield request
+                #pprint(card)
+                url = ''.join([self.base_url, card['url']])
+                # body = card['html'].encode('utf-8')
+                body = card['html']
+                block = response.replace(body=body)
+                rate = ' '.join(block.css('div[class="reviews-info"] span[class="point"]').xpath('text()').extract())
+                colors = ','.join(map(lambda i: i.replace(u'border:1px solid #b6b6b6; background-color: ', ''), block.css('div.color-list span').xpath('@style').extract()))
+                ymarket_link = ''.join(block.css('div[class="price-in-shops"] span').xpath('@data-link').extract())
+                pprint(rate)
+                pprint(colors)
+                pprint(ymarket_link)
+                request = self.getRequest(url, self.parse_product_page, dont_filter=True, request_type=self.product_request_type)
+                request.meta['parent'] = card['page']
+                request.meta['category'] = card['page']
+                request.meta['ymarket_link'] = ymarket_link
+                request.meta['rate'] = rate
+                request.meta['colors'] = colors
+                yield request
 
     def process_webdriver(self, driver):
         IMPLICITLY_WAIT = 3
@@ -138,6 +152,117 @@ class ProductParserSpider(scrapy.Spider):
         else:
             return response.request.url
 
+    def parse_product_page(self, response):
+        # pprint(response.text)
+        requested_url = self.get_request_url(response)
+        title = ' '.join(response.css('div[class="product-page"] div[class="p-info"] h1').xpath('text()').extract())
+        description = ' '.join(
+            response.css('div[class="product-page"] div[class="p-info"] div[class="desc"] p[class="d-text"]').xpath(
+                'text()').extract())
+        try:
+            price = int(' '.join(response.css(
+                'div[class="product-page"] div[class="p-info"] div[class="info-detail"] span[itemprop="price"]').xpath(
+                '@content').extract()))
+        except Exception as ex:
+            price = None
+        shop_link = ' '.join(response.css(
+            'div[class="product-page"] div[class="p-info"] div[class="btn-box"] a[class="btn btn-in-shops"]').xpath(
+            '@href').extract())
+        shop_link2 = ' '.join(
+            response.css('div[class="product_tabs"] section[id="content1"] a').xpath('@href').extract())
+        categories = response.css('div[class="b-top"] li[class="breadcrumbs-item"] a').xpath('@href').extract()
+        l = ItemLoader(item=ProductItem(), response=response)
+        product_id = requested_url.split('/').pop()
+        l.add_value('product_id', product_id)
+        l.add_value('html', response.text)
+        l.add_value('url', requested_url)
+        l.add_value('title', title)
+        l.add_value('description', description)
+        l.add_value('price', price)
+        l.add_value('shop_link', shop_link)
+        if 'ymarket_link' in response.meta and len(response.meta['ymarket_link']) > 0:
+            l.add_value('shop_link2', response.meta['ymarket_link'])
+        if 'rate' in response.meta and len(response.meta['rate']) > 0:
+            l.add_value('rate', response.meta['rate'])
+        if 'colors' in response.meta and len(response.meta['colors']) > 0:
+            l.add_value('colors', response.meta['colors'])
+        parameters = self.parse_parameters(response)
+        l.add_value('parameters', parameters)
+        feedbacks = self.parse_feedbacks(response)
+        l.add_value('feedbacks', feedbacks)
+        if len(categories) > 0:
+            for category in categories:
+                l.add_value('category', category)
+                break
+        elif 'category' in response.meta:
+            l.add_value('category', response.meta['category'])
+        related_products = ','.join(map(lambda i: i.split('/').pop(),
+                                        response.css('div[class="related-products"] div[class="b-info-wrap"] a').xpath(
+                                            '@href').extract()))
+        if len(related_products) > 0:
+            l.add_value('related_products', related_products)
+        yield l.load_item()
+        # save images
+        image_urls = response.css('div[class="photos"] img').xpath('@src').extract()
+        for link in image_urls:
+            if link.startswith('//') or (not link.startswith('https:')):
+                link = 'https:{img}'.format(img=link)
+            request = scrapy.Request(link, self.download_image)
+            request.meta['product_id'] = product_id
+            request.meta['filename'] = '-'.join(link.split('/')[-3:])
+            request.meta['autotype'] = True
+            yield request
+
+    def download_image(self, response):
+        Item = ImageItem()
+        if 'product_id' in response.meta:
+            Item['product_id'] = response.meta['product_id']
+        if 'category_url' in response.meta:
+            Item['category_url'] = response.meta['category_url']
+        if 'autotype' in response.meta and response.meta['autotype']:
+            filename = response.meta['filename']
+            ext = response.headers['Content-Type'].split('/').pop()
+            Item['filename'] = '.'.join([filename, ext])
+        else:
+            Item['filename'] = response.meta['filename']
+        Item['data'] = response.body
+        Item['url'] = response.url
+        yield Item
+
+    def get_uri(self, url):
+        return url.replace(self.base_url, '').split('?')[0]
+
+
+    def parse_parameters(self, response):
+        parameters_html = ' '.join(response.css('div[class="product_tabs"] section[id="content2"] div[id="marketSpecs"]').extract())
+        body = parameters_html
+        block = response.replace(body=body.encode('utf-8'))
+        params = block.xpath(u'//article/header/following-sibling::div[1]').xpath(u'//div[@data-tid]/span/text()').extract()
+        data = {}
+        for i in range(0, len(params), 2):
+            data[params[i]] = params[i+1]
+        return json.dumps(data)
+
+    def parse_feedbacks(self, response):
+        feedbacks_html = ' '.join(response.css('div[class="product_tabs"] section[id="content3"] div[id="marketReviews"]').extract())
+        body = feedbacks_html.encode('utf-8')
+        block = response.replace(body=body)
+        fb_blocks = block.xpath(u'//div[text() = "Отзывы"]/following-sibling::div[1]/div').extract()
+        data = []
+        for fb_block in fb_blocks:
+            item = {}
+            fb_response = response.replace(body=fb_block.encode('utf-8'))
+            item['name'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[1]/span').xpath('text()').extract())
+            item['eval'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[2]/div/div').xpath('text()').extract())
+            item['opinion'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[2]/span[1]').xpath('text()').extract())
+            item['experience'] = ' '.join(fb_response.xpath('//img/following-sibling::div[1]/div[2]/span[2]').xpath('text()').extract())
+            item['plus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Достоинства']/following-sibling::p[1]").xpath('text()').extract())
+            item['minus'] = ' '.join(fb_response.xpath(u"//span[text() = 'Недостатки']/following-sibling::p[1]").xpath('text()').extract())
+            item['comment'] = ' '.join(fb_response.xpath(u"//span[text() = 'Комментарий']/following-sibling::p[1]").xpath('text()').extract())
+            item['date'] = ' '.join(fb_response.xpath('//div[3]').xpath('text()').extract())
+            item['image'] = ' '.join(fb_response.xpath('//img').xpath('@src').extract())
+            data.append(item)
+        return json.dumps(data)
 
 
 
