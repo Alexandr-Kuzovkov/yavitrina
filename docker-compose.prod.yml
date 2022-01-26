@@ -114,22 +114,27 @@ services:
     restart: always
 
   selenium-hub:
-    image: selenium/hub
+    #image: selenium/hub
+    image: selenium/hub:4.0.0-rc-1-prerelease-20210618
     networks:
       - back
     ports:
-      - 4444:4444
+      - "4442-4444:4442-4444"
     mem_limit: 1500m
     memswap_limit: 2000m
     restart: always
 
   chrome:
-    image: selenium/node-chrome
+    #image: selenium/node-chrome
+    image: selenium/node-chrome:4.0.0-rc-1-prerelease-20210618
     links:
       - selenium-hub:hub
     environment:
       - HUB_PORT_4444_TCP_ADDR=selenium-hub:4444/grid/register/
       - GRID_TIMEOUT=180 # Default timeout is 30s might be low for Selenium
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
     volumes:
       - /dev/shm:/dev/shm
     networks:
