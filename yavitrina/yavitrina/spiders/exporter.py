@@ -57,6 +57,7 @@ class ExporterSpider(scrapy.Spider):
         self.export_category_has_settings()
         self.export_product_category()
         self.export_tag()
+        # self.export_product_tag()
         self.export_new_category()
         self.export_product_settings()
 
@@ -84,7 +85,8 @@ class ExporterSpider(scrapy.Spider):
                 row = {}
                 rating = None
                 if product['rate'] is not None:
-                    rating = float(product['rate'].strip().replace('(', '').replace(')', '').replace('/', '.'))
+                    # rating = float(product['rate'].strip().replace('(', '').replace(')', '').replace('/', '.'))
+                    rating = float(product['rate'].strip().replace('(', '').replace(')', '').split('/').pop())
                 row['title'] = product['title']
                 row['description'] = product['description']
                 row['price'] = product['price']
@@ -506,10 +508,50 @@ class ExporterSpider(scrapy.Spider):
                     category_id = category_map[tag['page']]
                 else:
                     category_id = None
-                sql = "INSERT INTO tag (name, category_id) VALUES (%s,%s) ON DUPLICATE KEY UPDATE category_id=%s"
-                self.db_export.cur.execute(sql, [tag['title'], category_id, category_id])
+                sql = "INSERT INTO tag (name, category_id, url, title) VALUES (%s,%s,%s,%s) ON DUPLICATE KEY UPDATE category_id=%s"
+                self.db_export.cur.execute(sql, [tag['title'], category_id, tag['url'], tag['target_title'], category_id])
             self.db_export.conn.commit()
         self.logger.info('done')
+
+    # def export_product_tag(self):
+    #     self.logger.info('export product_tag...')
+    #     LIMIT = 1000
+    #     offset = 0
+    #     while True:
+    #         buffer = []
+    #         self.logger.info('fetching items %s - %s' % (offset, offset+LIMIT))
+    #         sql = '''SELECT product_id, tag.url
+    #                 FROM (SELECT * FROM product_card WHERE product_id IN (SELECT product_id FROM product)) AS pc
+    #                 INNER JOIN tag ON string_to_array(pc.page, ',') && string_to_array(tag.page, ',')
+    #                 WHERE pc.product_id IN (SELECT product_id FROM product)
+    #                 ORDER BY pc.id OFFSET {offset} LIMIT {limit}'''.format(offset=offset, limit=LIMIT)
+    #         start_time = time.time()
+    #         items = self.db_import._getraw(sql, ['product_id', 'url'])
+    #         end_time = time.time()
+    #         count = len(items)
+    #         self.log('... %s items fetched (%s ms)' % (count, round((end_time - start_time), 3)))
+    #         if count == 0:
+    #             break
+    #         part_ids = map(lambda i: i['product_id'], items)
+    #         products = self.db_export._getraw("SELECT id, product_id FROM product WHERE product_id IN (%s)" % ','.join(map(lambda i: "'%s'" % i, part_ids)), ['id', 'product_id'])
+    #         product_map = {}
+    #         for product in products:
+    #             product_map[product['product_id']] = product['id']
+    #         part_urls = map(lambda i: i['url'], items)
+    #         tags = self.db_export._getraw("SELECT id, url FROM tag WHERE url IN (%s)" % ','.join(map(lambda i: "'%s'" % i, part_urls)), ['id', 'url'])
+    #         tag_map = {}
+    #         for tag in tags:
+    #             tag_map[tag['url']] = tag['id']
+    #         for item in items:
+    #             row = {}
+    #             if item['product_id'] in product_map and item['url'] in tag_map:
+    #                 row['product_id'] = product_map[item['product_id']]
+    #                 row['tag_id'] = tag_map[item['url']]
+    #                 buffer.append(row)
+    #         self.db_export._insert('product_tag', buffer, ignore=True)
+    #         offset += LIMIT
+    #     self.logger.info('done')
+
 
     def export_new_category(self):
         self.logger.info('export new category...')

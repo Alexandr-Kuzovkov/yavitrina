@@ -262,6 +262,8 @@ DROP TABLE IF EXISTS `tag` ;
 CREATE TABLE IF NOT EXISTS `tag` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NULL DEFAULT NULL,
+  `url` VARCHAR(255) NULL DEFAULT NULL,
+  `title` VARCHAR(255) NULL DEFAULT NULL,
   `category_id` INT NULL DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT now(),
   PRIMARY KEY (`id`),
@@ -274,6 +276,28 @@ CREATE TABLE IF NOT EXISTS `tag` (
 ENGINE = InnoDB;
 CREATE UNIQUE INDEX uidx_tag
 ON tag (name);
+
+CREATE TABLE IF NOT EXISTS `product_tag` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `product_id` INT NULL DEFAULT NULL,
+  `tag_id` INT NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT now(),
+  PRIMARY KEY (`id`),
+  INDEX `fk_product_tag1__idx` (`tag_id` ASC) ,
+  INDEX `fk_product_tag2__idx` (`product_id` ASC) ,
+  CONSTRAINT `fk_product_tag1`
+    FOREIGN KEY (`tag_id`)
+    REFERENCES `tag` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_product_tag2`
+    FOREIGN KEY (`product_id`)
+    REFERENCES `product` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+CREATE UNIQUE INDEX uidx_product_tag
+ON product_tag (tag_id, product_id);
 
 -- -----------------------------------------------------
 -- Table `settings`

@@ -215,22 +215,26 @@ class PgSQLStore(PgSQLBase):
             return res
 
     def save_tag(self, data):
-        res = self._get('tag', field_list=None, where='title=%s', data=[data['title']])
-        if len(res) > 0:
-            tag = res[0]
-            if tag['page'] is not None:
-                pages = tag['page'].split(',')
-                pages.append(data['page'])
-                pages = list(set(pages))
-                data['page'] = ','.join(pages)
-                sql = "UPDATE tag SET page=%s WHERE id=%s"
-                self.dbopen()
-                self.cur.execute(sql, [data['page'], tag['id']])
-                self.conn.commit()
-            return None
-        else:
-            res = self._insert('tag', [data])
+        if 'id' in data:
+            res = self._update('tag', data,  {'id': data['id']})
             return res
+        else:
+            res = self._get('tag', field_list=None, where='title=%s', data=[data['title']])
+            if len(res) > 0:
+                tag = res[0]
+                if tag['page'] is not None:
+                    pages = tag['page'].split(',')
+                    pages.append(data['page'])
+                    pages = list(set(pages))
+                    data['page'] = ','.join(pages)
+                    sql = "UPDATE tag SET page=%s WHERE id=%s"
+                    self.dbopen()
+                    self.cur.execute(sql, [data['page'], tag['id']])
+                    self.conn.commit()
+                return None
+            else:
+                res = self._insert('tag', [data])
+                return res
 
     def save_product_card(self, data):
         res = self._get('product_card', field_list=None, where='product_id=%s', data=[data['product_id']])
@@ -334,11 +338,15 @@ class PgSQLStore(PgSQLBase):
             return None
 
     def get_items_total(self, table, condition=None):
-        if condition is not None and type(condition) is not dict:
-            raise Exception('Type of the condition must be dict!')
-        if condition is not None:
+        if condition is not None and type(condition) is not dict and type(condition) is not str:
+            raise Exception('Type of the condition must be dict or str!')
+        if condition is not None and type(condition) is dict:
             cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
             data = condition.values()
+            sql = "SELECT count(*) AS total FROM {table} WHERE {cond}".format(table=table, cond=cond)
+        elif condition is not None and type(condition) is str:
+            data = None
+            cond = condition
             sql = "SELECT count(*) AS total FROM {table} WHERE {cond}".format(table=table, cond=cond)
         else:
             data = None
@@ -348,12 +356,17 @@ class PgSQLStore(PgSQLBase):
         return res
 
     def get_items_chunk(self, table, condition=None, offset=0, limit=100, order='id'):
-        if condition is not None and type(condition) is not dict:
-            raise Exception('Type of the condition must be dict!')
+        if condition is not None and type(condition) is not dict and type(condition) is not str:
+            raise Exception('Type of the condition must be dict or str!')
         fld_lst = self._get_fld_list(table)
-        if condition is not None:
+        if condition is not None and type(condition) is dict:
             cond = ' AND '.join(map(lambda k: k + ' %s', condition.keys()))
             data = condition.values()
+            sql = "SELECT * FROM {table} WHERE {cond} ORDER BY {order} OFFSET {offset} LIMIT {limit} ".format(table=table, cond=cond, order=order, limit=limit, offset=offset)
+            res = self._getraw(sql, fld_lst, data)
+        elif condition is not None and type(condition) is str:
+            cond = condition
+            data = None
             sql = "SELECT * FROM {table} WHERE {cond} ORDER BY {order} OFFSET {offset} LIMIT {limit} ".format(table=table, cond=cond, order=order, limit=limit, offset=offset)
             res = self._getraw(sql, fld_lst, data)
         else:
