@@ -131,7 +131,7 @@ class DatabaseExporterPipeline(object):
         crawler.signals.connect(pipeline.spider_opened, signals.spider_opened)
         crawler.signals.connect(pipeline.spider_closed, signals.spider_closed)
         self.stats = crawler.stats
-        if crawler.spider is not None and crawler.spider.name in ['test2', 'exporter']:
+        if crawler.spider is not None and crawler.spider.name in ['test2', 'exporter', 'exporter_product_tag']:
             return pipeline
 
     def spider_opened(self, spider):
