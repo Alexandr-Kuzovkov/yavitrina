@@ -87,7 +87,7 @@ class YavitrinaPipeline(object):
         crawler.signals.connect(pipeline.spider_opened, signals.spider_opened)
         crawler.signals.connect(pipeline.spider_closed, signals.spider_closed)
         self.stats = crawler.stats
-        if crawler.spider is not None and crawler.spider.name in ['vitrina', 'test']:
+        if crawler.spider is not None and crawler.spider.name in ['vitrina', 'test', 'tag_parser', 'product_parser']:
             return pipeline
 
     def spider_opened(self, spider):
@@ -131,7 +131,7 @@ class DatabaseExporterPipeline(object):
         crawler.signals.connect(pipeline.spider_opened, signals.spider_opened)
         crawler.signals.connect(pipeline.spider_closed, signals.spider_closed)
         self.stats = crawler.stats
-        if crawler.spider is not None and crawler.spider.name in ['test2', 'exporter']:
+        if crawler.spider is not None and crawler.spider.name in ['test2', 'exporter', 'exporter_product_tag']:
             return pipeline
 
     def spider_opened(self, spider):
@@ -312,7 +312,7 @@ class YavitrinaPgSqlExporter(object):
         self.db = PgSQLStore(db_conf)
         if hasattr(self.spider, 'clear_db') and self.spider.clear_db:
             self.db.clear_db()
-        if self.spider.name in ['test']:
+        if self.spider.name in ['test', 'tag_parser', 'product_parser']:
             self.spider.db = self.db
 
     def finish_exporting(self):

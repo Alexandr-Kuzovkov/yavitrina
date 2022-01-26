@@ -25,6 +25,8 @@ class TagItem(scrapy.Item):
     title = scrapy.Field()
     page = scrapy.Field()
     html = scrapy.Field()
+    id = scrapy.Field()
+    target_title = scrapy.Field()
 
 class SearchTagItem(scrapy.Item):
     url = scrapy.Field()
