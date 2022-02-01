@@ -502,12 +502,15 @@ class ExporterSpider(scrapy.Spider):
             tags = self.db_import.get_items_chunk('tag', condition=None, offset=offset, limit=LIMIT)
             buffer = []
             self.db_export.dbopen()
+            category_id = None
             for tag in tags:
                 #category id указывает на категорию страницы на которой отображается этот тег
-                if tag['page'] is not None and tag['page'] in category_map:
-                    category_id = category_map[tag['page']]
-                else:
-                    category_id = None
+                if tag['page'] is not None:
+                    tag_pages = map(lambda i: i.strip(), tag['page'].split(','))
+                    for tag_page in tag_pages:
+                        if tag_page in category_map:
+                            category_id = category_map[tag_page]
+                            break
                 sql = "INSERT INTO tag (name, category_id, url, title) VALUES (%s,%s,%s,%s) ON DUPLICATE KEY UPDATE category_id=%s"
                 self.db_export.cur.execute(sql, [tag['title'], category_id, tag['url'], tag['target_title'], category_id])
             self.db_export.conn.commit()
