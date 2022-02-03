@@ -60,7 +60,7 @@ class ExporterProductTagSpider(scrapy.Spider):
             items = self.db_import._getraw(sql, ['product_id', 'url'])
             end_time = time.time()
             count = len(items)
-            self.log('... %s items fetched (%s ms)' % (count, round((end_time - start_time), 3)))
+            self.logger.info('... %s items fetched (%s ms)' % (count, round((end_time - start_time), 3)))
             if count == 0:
                 break
             part_ids = map(lambda i: i['product_id'], items)
