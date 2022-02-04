@@ -35,6 +35,7 @@ class VitrinaSpider(scrapy.Spider):
     #allowed_domains = ['yavitrina.ru', 'i.yavitrina.ru']
     allowed_domains = []
     dirname = 'vitrina'
+    deltafetch_dir = 'deltafetch'
     handle_httpstatus_list = [400, 404]
     h = html2text.HTML2Text()
     h.ignore_emphasis = True
@@ -42,7 +43,6 @@ class VitrinaSpider(scrapy.Spider):
     logger = logging.getLogger()
     drain = False
     pagination = {}
-    es_exporter = None
     db = None
     base_url = 'https://yavitrina.ru'
     local_url = 'http://localhost:6800'
@@ -64,9 +64,19 @@ class VitrinaSpider(scrapy.Spider):
             "http": "scrapy_headless.HeadlessDownloadHandler",
             "https": "scrapy_headless.HeadlessDownloadHandler",
         },
-        # 'LOG_LEVEL': 'DEBUG'
+        'SPIDER_MIDDLEWARES': {
+            'scrapy_splash.SplashDeduplicateArgsMiddleware': 100,
+            'scrapy.downloadermiddlewares.redirect.RedirectMiddleware': 101,
+            'scrapy_deltafetch.DeltaFetch': 102,
+        },
+        'DELTAFETCH_ENABLED': True,
+        'DELTAFETCH_DIR': '/scrapy/yavitrina/files/vitrina/deltafetch',
+        'DELTAFETCH_RESET': False,
 
+        # 'LOG_LEVEL': 'DEBUG'
     }
+    # reset visited history
+    # scrapy crawl category_parser -a deltafetch_reset=1
 
     def __init__(self, drain=False, noproxy=False, request_type=False, product_request_type=False, lostonly=False, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)

@@ -272,6 +272,7 @@ class YavitrinaPgSqlExporter(object):
 
     spider = None
     dirname = None
+    deltafetch_dir = None
     sub_folders = {'images_files': None}
     config = None
     db = None
@@ -302,6 +303,9 @@ class YavitrinaPgSqlExporter(object):
             item_folder = os.path.sep.join([self.dirname, folder])
             create_folder(item_folder)
             self.sub_folders[folder] = item_folder
+        if hasattr(self.spider, 'deltafetch_dir') and self.spider.deltafetch_dir is not None:
+            self.deltafetch_dir = os.path.sep.join([self.dirname, self.spider.deltafetch_dir])
+            create_folder(self.deltafetch_dir)
         db_conf = {
             'dbname':self.config['DATABASE']['DB_NAME'],
             'dbuser':self.config['DATABASE']['DB_USER'],
