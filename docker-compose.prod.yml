@@ -73,6 +73,11 @@ services:
     mem_limit: 1200m
     memswap_limit: 1400m
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
 
   db:
     image: postgres:12.1
@@ -93,6 +98,11 @@ services:
       - back
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
     shm_size: 1g
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
 
   selenium:
     privileged: true
@@ -113,6 +123,11 @@ services:
     mem_limit: 1500m
     memswap_limit: 3000m
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
 
   selenium-hub:
     #image: selenium/hub
@@ -124,6 +139,11 @@ services:
     mem_limit: 1500m
     memswap_limit: 2000m
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
 
   chrome:
     #image: selenium/node-chrome
@@ -143,6 +163,11 @@ services:
     mem_limit: 1500m
     memswap_limit: 3000m
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
 
   mysql:
     image: mysql:5.7
@@ -161,7 +186,11 @@ services:
      MYSQL_PASSWORD: userp@ssw0rd
     networks:
       - back
-
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
 
 networks:
   back:
