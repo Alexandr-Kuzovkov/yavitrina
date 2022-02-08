@@ -71,6 +71,11 @@ services:
         max-size: "20m"
         max-file: "1"
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
 
   db:
     image: postgres:12.1
@@ -91,6 +96,11 @@ services:
       - back
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
     shm_size: 1g
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
 
   selenium:
     privileged: true
@@ -108,25 +118,52 @@ services:
     networks:
       - back
     user: apps
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
+
+  selenium:
+    privileged: true
+    build:
+      context: ./selenium
+      dockerfile: Dockerfile
+    volumes:
+      - ./selenium/app:/usr/src/app
+      - ./selenium/data:/data
+      - /dev/shm:/dev/shm
+      - nginx_log:/nginx_log
+    dns: 8.8.8.8
+    ports:
+      - "8257:8000"
+    networks:
+      - back
+    user: apps
+    mem_limit: 1500m
+    memswap_limit: 3000m
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
 
   selenium-hub:
-    image: selenium/hub
+    #image: selenium/hub
+    image: selenium/hub:4.0.0-rc-1-prerelease-20210618
     networks:
       - back
     ports:
-      - 4444:4444
-
-  chrome:
-    image: selenium/node-chrome
-    links:
-      - selenium-hub:hub
-    environment:
-      - HUB_PORT_4444_TCP_ADDR=selenium-hub:4444/grid/register/
-      - GRID_TIMEOUT=180 # Default timeout is 30s might be low for Selenium
-    volumes:
-      - /dev/shm:/dev/shm
-    networks:
-      - back
+      - "4442-4444:4442-4444"
+    mem_limit: 1500m
+    memswap_limit: 2000m
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
 
   mysql:
     image: mysql:5.7
@@ -145,6 +182,11 @@ services:
      MYSQL_PASSWORD: userp@ssw0rd
     networks:
       - back
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "1"
 
 
 networks:
