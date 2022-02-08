@@ -280,6 +280,18 @@ class ExporterSpider(scrapy.Spider):
     def export_category(self):
         self.logger.info('export category...')
         latest_time = self.db_export.get_latest_time('category')
+        sql = """UPDATE category SET parent_id=(SELECT parent_category_id FROM
+                 (
+                SELECT id, title, url, parent_tilte, parent_url, parent_category_id FROM (
+                SELECT c.id, c.title, c.url, c.parent_id, c.parent_url AS parent, pc.title AS parent_tilte,
+                 pc.url AS parent_url, pc.id AS parent_category_id
+                FROM category c LEFT JOIN category pc
+                 ON c.parent_url=pc.url
+                WHERE c.parent_id isnull) t1 WHERE parent_category_id notnull
+                     )t2 WHERE category.id=t2.id) WHERE parent_id isnull"""
+        res = self.db_import._exec(sql)
+        self.logger.info('res={res}'.format(res=str(res)))
+        latest_time = None # to get all categories each time
         if latest_time is not None:
             condition = {'created_at >=': str(latest_time)}
         else:
@@ -287,7 +299,7 @@ class ExporterSpider(scrapy.Spider):
         table = 'category'
         total_categories = self.db_import.get_items_total(table, condition)
         # pprint(total_categories)
-        LIMIT = 100
+        LIMIT = 1000
         category_urls = {}
         offsets = range(0, total_categories, LIMIT)
         for offset in offsets:
@@ -398,13 +410,14 @@ class ExporterSpider(scrapy.Spider):
             buffer = []
             settings_values = self.db_import.get_items_chunk(table, condition=None, offset=offset, limit=LIMIT)
             for setting_value in settings_values:
-                res = filter(lambda i: i['url'] == setting_value['url'] and i['name'] == setting_value['settings_name'].decode('utf-8'), settings_map[setting_value['url']])
-                if len(res) > 0:
-                    for item in res:
-                        row = {}
-                        row['settings_id'] = item['id']
-                        row['value'] = setting_value['value']
-                        buffer.append(row)
+                if setting_value['url'] in settings_map:
+                    res = filter(lambda i: i['url'] == setting_value['url'] and i['name'] == setting_value['settings_name'].decode('utf-8'), settings_map[setting_value['url']])
+                    if len(res) > 0:
+                        for item in res:
+                            row = {}
+                            row['settings_id'] = item['id']
+                            row['value'] = setting_value['value']
+                            buffer.append(row)
             self.db_export._insert('settings_value', buffer, ignore=True)
         self.logger.info('done')
 
@@ -502,12 +515,15 @@ class ExporterSpider(scrapy.Spider):
             tags = self.db_import.get_items_chunk('tag', condition=None, offset=offset, limit=LIMIT)
             buffer = []
             self.db_export.dbopen()
+            category_id = None
             for tag in tags:
                 #category id указывает на категорию страницы на которой отображается этот тег
-                if tag['page'] is not None and tag['page'] in category_map:
-                    category_id = category_map[tag['page']]
-                else:
-                    category_id = None
+                if tag['page'] is not None:
+                    tag_pages = map(lambda i: i.strip(), tag['page'].split(','))
+                    for tag_page in tag_pages:
+                        if tag_page in category_map:
+                            category_id = category_map[tag_page]
+                            break
                 sql = "INSERT INTO tag (name, category_id, url, title) VALUES (%s,%s,%s,%s) ON DUPLICATE KEY UPDATE category_id=%s"
                 self.db_export.cur.execute(sql, [tag['title'], category_id, tag['url'], tag['target_title'], category_id])
             self.db_export.conn.commit()
@@ -554,7 +570,7 @@ class ExporterSpider(scrapy.Spider):
 
 
     def export_new_category(self):
-        self.logger.info('export new category...')
+        self.logger.info('export new_category...')
         LIMIT = 1000
         category_map = {}
         # collecting categories

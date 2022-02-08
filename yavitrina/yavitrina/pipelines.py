@@ -87,7 +87,7 @@ class YavitrinaPipeline(object):
         crawler.signals.connect(pipeline.spider_opened, signals.spider_opened)
         crawler.signals.connect(pipeline.spider_closed, signals.spider_closed)
         self.stats = crawler.stats
-        if crawler.spider is not None and crawler.spider.name in ['vitrina', 'test', 'tag_parser', 'product_parser']:
+        if crawler.spider is not None and crawler.spider.name in ['vitrina', 'test', 'tag_parser', 'product_parser', 'category_parser']:
             return pipeline
 
     def spider_opened(self, spider):
@@ -272,6 +272,7 @@ class YavitrinaPgSqlExporter(object):
 
     spider = None
     dirname = None
+    deltafetch_dir = None
     sub_folders = {'images_files': None}
     config = None
     db = None
@@ -302,6 +303,9 @@ class YavitrinaPgSqlExporter(object):
             item_folder = os.path.sep.join([self.dirname, folder])
             create_folder(item_folder)
             self.sub_folders[folder] = item_folder
+        if hasattr(self.spider, 'deltafetch_dir') and self.spider.deltafetch_dir is not None:
+            self.deltafetch_dir = os.path.sep.join([self.dirname, self.spider.deltafetch_dir])
+            create_folder(self.deltafetch_dir)
         db_conf = {
             'dbname':self.config['DATABASE']['DB_NAME'],
             'dbuser':self.config['DATABASE']['DB_USER'],
@@ -312,7 +316,7 @@ class YavitrinaPgSqlExporter(object):
         self.db = PgSQLStore(db_conf)
         if hasattr(self.spider, 'clear_db') and self.spider.clear_db:
             self.db.clear_db()
-        if self.spider.name in ['test', 'tag_parser', 'product_parser']:
+        if self.spider.name in ['test', 'tag_parser', 'product_parser', 'category_parser']:
             self.spider.db = self.db
 
     def finish_exporting(self):

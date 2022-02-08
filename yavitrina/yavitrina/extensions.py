@@ -212,6 +212,13 @@ class PgSQLStore(PgSQLBase):
                 if len(res) > 0:
                     data['parent_id'] = res[0]['id']
             res = self._insert('category', [data])
+            inserteds = self._get('category', field_list=['id'], where='url=%s', data=[data['url']])
+            if len(inserteds) > 0:
+                inserted = inserteds[0]
+                childs = self._get('category', field_list=['id'], where='parent_url=%s', data=[data['url']])
+                if len(childs) > 0:
+                    child = childs[0]
+                    self._update('category', {'parent_id': inserted['id']}, {'id': child['id']})
             return res
 
     def save_tag(self, data):

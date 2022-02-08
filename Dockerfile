@@ -25,4 +25,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ./start.sh /usr/local/bin/start.sh
 
 RUN chmod +x /usr/local/bin/start.sh
+RUN pip install scrapy-deltafetch
 CMD ["/usr/local/bin/start.sh"]
