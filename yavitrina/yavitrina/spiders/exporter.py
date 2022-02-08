@@ -50,7 +50,6 @@ class ExporterSpider(scrapy.Spider):
         self.export_review(data['feedbacks'])
         category_urls = self.export_category()
         self.link_categories(category_urls)
-        self.link_categories(category_urls)
         self.export_settings()
         self.export_settings_value()
         self.export_category_search()
