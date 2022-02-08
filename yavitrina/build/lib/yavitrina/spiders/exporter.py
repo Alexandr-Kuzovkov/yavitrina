@@ -410,13 +410,14 @@ class ExporterSpider(scrapy.Spider):
             buffer = []
             settings_values = self.db_import.get_items_chunk(table, condition=None, offset=offset, limit=LIMIT)
             for setting_value in settings_values:
-                res = filter(lambda i: i['url'] == setting_value['url'] and i['name'] == setting_value['settings_name'].decode('utf-8'), settings_map[setting_value['url']])
-                if len(res) > 0:
-                    for item in res:
-                        row = {}
-                        row['settings_id'] = item['id']
-                        row['value'] = setting_value['value']
-                        buffer.append(row)
+                if setting_value['url'] in settings_map:
+                    res = filter(lambda i: i['url'] == setting_value['url'] and i['name'] == setting_value['settings_name'].decode('utf-8'), settings_map[setting_value['url']])
+                    if len(res) > 0:
+                        for item in res:
+                            row = {}
+                            row['settings_id'] = item['id']
+                            row['value'] = setting_value['value']
+                            buffer.append(row)
             self.db_export._insert('settings_value', buffer, ignore=True)
         self.logger.info('done')
 

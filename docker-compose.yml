@@ -90,6 +90,7 @@ services:
     networks:
       - back
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    shm_size: 1g
 
   selenium:
     privileged: true
