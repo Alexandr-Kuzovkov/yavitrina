@@ -49,6 +49,7 @@ services:
       - ./home:/home/root
       - /home/ubuntu/vitrina.config.ini:/home/root/config.ini
       - /home/ubuntu/logs:/home/root/logs
+    restart: unless-stopped
     logging:
       driver: "json-file"
       options:
