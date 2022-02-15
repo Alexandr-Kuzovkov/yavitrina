@@ -5,7 +5,7 @@ services:
     depends_on:
      - scrapy
     ports:
-     - "80:80"
+     - "9000:80"
     volumes:
      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
      - ./home/logs/boardfeeds:/home/root/logs/boardfeeds
