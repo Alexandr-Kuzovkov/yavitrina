@@ -20,7 +20,13 @@
                     <td>{{ option.option_name }}</td>
                     <td>
                         {% if option.option_name in options_types %}
-                            {% if options_types[option.option_name] in ['INTEGER', 'FLOAT'] %}
+                            {% if option.option_name == 'date_count' %}
+                                <select name="{{ option.option_name }}">
+                                    {% for val in [5, 10, 15, 20, 25, 30] %}
+                                        <option value="{{ val }}" {% if Option.get_option_value(option.option_name, 'INTEGER') == val %} selected {% endif %}>{{ val }} days</option>
+                                    {% endfor %}
+                                </select>
+                            {% elif options_types[option.option_name] in ['INTEGER', 'FLOAT'] %}
                                 <input name="{{ option.option_name }}" type="number" value="{{ option.option_value }}">
                             {% elif options_types[option.option_name] == 'BOOLEAN'%}
                                 <input name="{{ option.option_name }}" type="checkbox" {% if Option.get_option_value(option.option_name, 'BOOLEAN') %} checked {% endif %}>

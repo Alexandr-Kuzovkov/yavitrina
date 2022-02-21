@@ -30,6 +30,10 @@
     </div>
 </div>
 
+<style>
+    div.box-body.table-responsive table.table.table-striped {cursor: pointer;}
+</style>
+
 
 <script>
     (function () {
@@ -38,6 +42,20 @@
             for (var i=0; i < tables.length; i++){
                getStatForTable(tables[i]);
             }
+
+            jQuery('div.box-body.table-responsive table.table.table-striped').click(function (ev) {
+                //console.log(ev.target.id);
+                var id = ev.target.id;
+                if (id){
+                    var table = id.split('-')[0];
+                    var el1 = document.getElementById(table+'-total');
+                    var el2 = document.getElementById(table+'-last');
+                    el1.innerHTML = '<img src="/static/img/preload-small.gif"/>';
+                    el2.innerHTML = '<img src="/static/img/preload-small.gif"/>';
+                    getStatForTable(table)
+                }
+
+            });
         }
 
 

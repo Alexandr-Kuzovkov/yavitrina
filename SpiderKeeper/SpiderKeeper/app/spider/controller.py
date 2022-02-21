@@ -17,7 +17,7 @@ from functools import wraps
 
 from SpiderKeeper.app import db, api, agent, app, config
 from SpiderKeeper.app.spider.model import JobInstance, Project, JobExecution, SpiderInstance, JobRunType, Option
-from SpiderKeeper.app.vitrina.helper import get_dates, get_stat, get_count_for_date, get_stat_mysql_table, get_tables
+from SpiderKeeper.app.vitrina.helper import get_dates, get_stat, get_count_for_date, get_stat_mysql_table, get_tables, get_stat_entity
 from SpiderKeeper.app.spider.helper import is_spider_duplicate, options_types
 from pprint import pprint
 api_spider_bp = Blueprint('spider', __name__)
@@ -720,6 +720,11 @@ def fibois_stats():
     dates = get_dates()
     return render_template("vitrina_stats_total_ajax.html", stat=stat, dates=dates, json=json)
 
+@app.route("/fibois/ajax/get_total_stat/<key>")
+def fibois_get_total_stat(key):
+    count = get_stat_entity(key)
+    return str(count)
+
 @app.route("/vitrina/ajax/count_for_date/<datestr>/<entity>")
 def count_for_date(datestr, entity):
     count = get_count_for_date(datestr, entity.strip())
@@ -753,27 +758,26 @@ def mysql_stat_table(table):
     stat = get_stat_mysql_table(table)
     return json.dumps(stat)
 
+@app.route("/maintenance/hardware")
+def herdware_page():
+    return render_template("hardware.html")
 
-'''
-@app.route("/fibois/ajax/get_options")
-def get_options():
-    options = Option.get_options()
-    if options is not None:
-        return json.dumps(options)
-    return '[]'
-
-@app.route("/fibois/ajax/set_option/<name>/<value>")
-def set_option(name, value):
-    option = Option.get_option(name)
-    if option is not None:
-        option.value = value
-        Option.set_option(option)
+@app.route("/maintenance/hardware-info/<arg>")
+def herdware_info(arg):
+    if arg == 'mem':
+        command = 'free -m'
+        content = os.popen(command).read()
+        content = content.decode('utf-8')
+        return content
+    elif arg == 'hdd':
+        command = 'df -h'
+        content = os.popen(command).read()
+        content = content.decode('utf-8')
+        return content
+    elif arg == 'top':
+        command = 'top -b -n 1'
+        content = os.popen(command).read()
+        content = content.decode('utf-8')
+        return content
     else:
-        option = Option(option_name=name, option_value=value)
-        Option.set_option(option)
-    option = Option.get_option(name)
-    if option is not None:
-        return json.dumps(option.to_dict())
-    return '{}'
-
-'''
+        return ''

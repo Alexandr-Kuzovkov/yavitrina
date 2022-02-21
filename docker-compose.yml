@@ -124,24 +124,21 @@ services:
         max-size: "20m"
         max-file: "1"
 
-  selenium:
-    privileged: true
-    build:
-      context: ./selenium
-      dockerfile: Dockerfile
+  chrome:
+    #image: selenium/node-chrome
+    image: selenium/node-chrome:4.0.0-rc-1-prerelease-20210618
+    links:
+      - selenium-hub:hub
+    environment:
+      - HUB_PORT_4444_TCP_ADDR=selenium-hub:4444/grid/register/
+      - GRID_TIMEOUT=180 # Default timeout is 30s might be low for Selenium
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
     volumes:
-      - ./selenium/app:/usr/src/app
-      - ./selenium/data:/data
       - /dev/shm:/dev/shm
-      - nginx_log:/nginx_log
-    dns: 8.8.8.8
-    ports:
-      - "8257:8000"
     networks:
       - back
-    user: apps
-#    mem_limit: 1500m
-#    memswap_limit: 3000m
     restart: always
     logging:
       driver: "json-file"

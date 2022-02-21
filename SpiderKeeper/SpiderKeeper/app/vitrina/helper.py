@@ -2,6 +2,7 @@ from SpiderKeeper.app.vitrina.pg import PgSQLStore
 from SpiderKeeper.app.vitrina.my import MySQLStore
 from SpiderKeeper.app.vitrina.settings import load_config
 from SpiderKeeper.app.vitrina.constants import *
+from SpiderKeeper.app.spider.model import Option
 import elasticsearch as elastic
 import datetime
 import time
@@ -31,10 +32,16 @@ mysql_db = MySQLStore(mysql_db_conf)
 def get_dates():
     dates = []
     now = int(time.time())
-    for i in range(0, 20):
+    date_count = Option.get_option_value('date_count', 'INTEGER')
+    for i in range(0, date_count):
         datestr = time.strftime('%Y-%m-%d', time.gmtime(now - i * 86400))
         dates.append(datestr)
     return dates
+
+def get_stat_entity(entity):
+    stat = {}
+    count = db.get_stat(entity)
+    return count
 
 def get_stat():
     stat = {}
@@ -42,8 +49,7 @@ def get_stat():
         'category', 'tag', 'image', 'product', 'product_card', 'search_tag',
         'category_tag', 'brocken_product', 'product_with_params', 'product_with_feedback'
     ]:
-        count = db.get_stat(entity)
-        stat[entity] = count
+        stat[entity] = '<span id="{entity}"><img src="/static/img/preload-small.gif"/></span>'.format(entity=entity)
     return stat
 
 def get_count_for_date(datestr, entity):

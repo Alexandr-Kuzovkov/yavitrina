@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content_header %}
+<h1>Hardware</h1>
+{% endblock %}
+{% block content_body %}
+<div class="box">
+    <div class="box-header">
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body table-responsive">
+        <style>
+            .hard-info
+            {
+                width: 95%;
+                height: auto;
+                min-height: 200px;
+                background-color: #1b2426;
+                color: #498f1b;
+                padding-left: 10px;
+                font-size: 16px;
+                overflow-y: visible;
+            }
+
+            .hard-info img
+            {
+                margin: 90px 0 0 49%;
+                display: inline-block;
+            }
+        </style>
+
+        <div role="tabpanel" class="tab-pane" id="system-info">
+
+            <h5>Memory (Mb)</h5>
+            <pre class="hard-info" id="mem"><img src="/static/img/preload-small.gif"/></pre>
+
+            <h5>Disk</h5>
+            <pre class="hard-info" id="hdd"><img src="/static/img/preload-small.gif"/></pre>
+
+            <h5>top</h5>
+            <pre class="hard-info" id="htop"><img src="/static/img/preload-small.gif"/></pre>
+
+            <script>
+                function update_info(){
+                    $('#mem').load('/maintenance/hardware-info/mem');
+                    $('#hdd').load('/maintenance/hardware-info/hdd');
+                    $('#htop').load('/maintenance/hardware-info/top');
+                }
+                var interval = setInterval(update_info, 3000);
+            </script>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

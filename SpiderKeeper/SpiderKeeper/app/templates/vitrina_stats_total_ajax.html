@@ -12,16 +12,16 @@
         </div>
     </div>
     <div class="box-body">
-        <p>Categories: {{ stat.category }}</p>
-        <p>Tags: {{ stat.tag }}</p>
-        <p>Search Tags: {{ stat.search_tag }}</p>
-        <p>Category Tags: {{ stat.category_tag }}</p>
-        <p>Images: {{ stat.image }}</p>
-        <p>Product cards: {{ stat.product_card }}</p>
-        <p>Products: {{ stat.product }}</p>
-        <p>Brocken product: {{ stat.brocken_product }}</p>
-        <p>Products with parameters: {{ stat.product_with_params }}</p>
-        <p>Products with feedback: {{ stat.product_with_feedback }}</p>
+        <p>Categories: {{ stat.category|safe }}</p>
+        <p>Tags: {{ stat.tag|safe }}</p>
+        <p>Search Tags: {{ stat.search_tag|safe }}</p>
+        <p>Category Tags: {{ stat.category_tag|safe }}</p>
+        <p>Images: {{ stat.image|safe }}</p>
+        <p>Product cards: {{ stat.product_card|safe }}</p>
+        <p>Products: {{ stat.product|safe }}</p>
+        <p>Brocken product: {{ stat.brocken_product|safe }}</p>
+        <p>Products with parameters: {{ stat.product_with_params|safe }}</p>
+        <p>Products with feedback: {{ stat.product_with_feedback|safe }}</p>
     </div>
 </div>
 
@@ -89,9 +89,18 @@
     </div>
 </div>
 
+<style>
+    div.box-body.table-responsive table.table.table-striped {cursor: pointer;}
+</style>
+
 <script>
     (function () {
         function onLoad(){
+            var keys = ['category', 'tag', 'image', 'product', 'product_card', 'search_tag',
+                        'category_tag', 'brocken_product', 'product_with_params', 'product_with_feedback'];
+            for (var i=0; i < keys.length; i++){
+                 getTotalStat(keys[i])
+            }
             var dates = {{ json.dumps(dates) | safe}}
             for (var i=0; i < dates.length; i++){
                getCountForDate(dates[i], 'category')
@@ -105,6 +114,26 @@
                getCountForDate(dates[i], 'product_with_params')
                getCountForDate(dates[i], 'product_with_feedback')
             }
+
+            jQuery('div.box-body.table-responsive table.table.table-striped').click(function (ev) {
+                //console.log(ev.target.id);
+                var id = ev.target.id;
+                var regex = /\d\d\d\d-\d\d-\d\d/y
+                var regex2 = /\d\d\d\d-\d\d-\d\d/
+                if (id){
+                    var el = document.getElementById(id);
+                    el.innerHTML = '<img src="/static/img/preload-small.gif"/>';
+                    var status = null;
+                    if (regex.test(id)){
+                        //console.log('getCountForDate')
+                        var date = id.match(regex2)[0];
+                        //console.log(id, date)
+                        status = id.split('-').pop()
+                        getCountForDate(date, status)
+                    }
+                }
+
+            });
         }
 
 
@@ -120,6 +149,20 @@
             }).fail(function() {
                 el.innerHTML = 'error';
               })
+        }
+
+        function getTotalStat(key) {
+            var el = document.getElementById(`${key}`);
+            jQuery.get(`/fibois/ajax/get_total_stat/${key}`, function (data) {
+                //console.log(data, typeof data);
+                if (typeof data == 'object'){
+                    el.innerHTML = data.msg;
+                }else{
+                    el.innerHTML = data;
+                }
+            }).fail(function() {
+                el.innerHTML = 'error';
+            })
         }
 
         window.addEventListener('load', onLoad);

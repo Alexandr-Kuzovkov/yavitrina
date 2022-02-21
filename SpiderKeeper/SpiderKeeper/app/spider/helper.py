@@ -5,7 +5,8 @@ from SpiderKeeper.app.spider.model import Project, JobInstance, SpiderInstance, 
 
 options_types = {
     'dont_run_duplicate': 'BOOLEAN',
-    'hidden_spiders': 'LIST'
+    'hidden_spiders': 'LIST',
+    'date_count': 'INTEGER'
 }
 
 # check duplicate

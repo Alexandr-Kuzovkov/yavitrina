@@ -93,6 +93,10 @@ def init_database():
         option = Option(option_name='hidden_spiders', option_value='test',
                         option_desc='List of spiders to hide in the spider list')
         Option.set_option(option)
+    option = Option.get_option('date_count')
+    if option is None:
+        option = Option(option_name='date_count', option_value=10, option_desc='History length in days on statistic page')
+        Option.set_option(option)
 
 
 # regist spider service proxy
