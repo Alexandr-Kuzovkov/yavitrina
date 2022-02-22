@@ -166,20 +166,6 @@ class PgSQLStoreBase(object):
 
 class PgSQLStore(PgSQLStoreBase):
 
-    def get_stat(self, entity):
-        if entity == 'brocken_product':
-            res = self._getone("SELECT count(*) AS count FROM product WHERE (description ISNULL OR description='') AND (title ISNULL OR title='')")
-        elif entity == 'product_with_params':
-            res = self._getone("select count(*) AS total from (select title, url, product_id, parameters, (select count(*) from jsonb_object_keys(parameters)) as params_count from product)t1 where params_count > 0")
-        elif entity == 'product_with_feedback':
-            res = self._getone("select count(*) AS total from (select title, url, product_id, feedbacks::json#>'{0,date}' as date from (select title, url, product_id, feedbacks from product where  jsonb_array_length(feedbacks) > 0) t1) t2 where date notnull")
-        else:
-            res = self._getone("SELECT count(*) AS count FROM " + entity)
-        if res and len(res):
-            return int(res[0])
-        else:
-            return 0
-
     def get_count_for_date(self, datestr, entity):
         if entity == 'brocken_product':
             query = "SELECT count(*) AS count FROM product WHERE (description ISNULL OR description='') AND (title ISNULL OR title='') AND date(created_at)='{date}'".format(date=datestr)
@@ -209,3 +195,35 @@ class PgSQLStore(PgSQLStoreBase):
         finally:
             self.pool.putconn(connection)
             return result
+
+    def get_stat(self, entity):
+        if entity == 'brocken_product':
+            query = "SELECT count(*) AS count FROM product WHERE (description ISNULL OR description='') AND (title ISNULL OR title='')"
+        elif entity == 'product_with_params':
+            query = "select count(*) AS total from (select title, url, product_id, parameters, (select count(*) from jsonb_object_keys(parameters)) as params_count from product)t1 where params_count > 0"
+        elif entity == 'product_with_feedback':
+            query = "select count(*) AS total from (select title, url, product_id, feedbacks::json#>'{0,date}' as date from (select title, url, product_id, feedbacks from product where  jsonb_array_length(feedbacks) > 0) t1) t2 where date notnull"
+        else:
+            query = "SELECT count(*) AS count FROM " + entity
+        try:
+            result = 0
+            connection = self.pool.getconn()
+            connection.autocommit = True
+            with connection.cursor() as cursor:
+                try:
+                    cursor.execute(query)
+                    #if cursor.rownumber > 0:
+                    res = cursor.fetchone()
+                    if res and len(res):
+                        result = int(res[0])
+                except (Exception, psycopg2.DatabaseError) as e:
+                    raise
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(e)
+        else:
+            pass
+        finally:
+            self.pool.putconn(connection)
+            return result
+
+

@@ -715,13 +715,13 @@ def service_stats(project_id):
     return render_template("server_stats.html", run_stats=run_stats)
 
 @app.route("/vitrina/stats")
-def fibois_stats():
+def vitrina_stats():
     stat = get_stat()
     dates = get_dates()
     return render_template("vitrina_stats_total_ajax.html", stat=stat, dates=dates, json=json)
 
-@app.route("/fibois/ajax/get_total_stat/<key>")
-def fibois_get_total_stat(key):
+@app.route("/vitrina/ajax/get_total_stat/<key>")
+def vitrina_get_total_stat(key):
     count = get_stat_entity(key)
     return str(count)
 

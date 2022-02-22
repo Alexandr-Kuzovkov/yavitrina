@@ -153,7 +153,7 @@
 
         function getTotalStat(key) {
             var el = document.getElementById(`${key}`);
-            jQuery.get(`/fibois/ajax/get_total_stat/${key}`, function (data) {
+            jQuery.get(`/vitrina/ajax/get_total_stat/${key}`, function (data) {
                 //console.log(data, typeof data);
                 if (typeof data == 'object'){
                     el.innerHTML = data.msg;
